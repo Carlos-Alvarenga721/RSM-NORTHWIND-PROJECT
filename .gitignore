@@ -1,0 +1,63 @@
+# Build output
+bin/
+obj/
+[Bb]uild/
+[Rr]elease/
+[Dd]ebug/
+
+# .NET
+TestResults/
+*.trx
+*.coverage
+*.coveragexml
+*.nupkg
+*.snupkg
+*.user
+*.rsuser
+*.suo
+*.userosscache
+*.sln.docstates
+project.lock.json
+artifacts/
+
+# ASP.NET and local configuration
+appsettings.Local.json
+appsettings.*.Local.json
+**/Properties/launchSettings.json
+secrets.json
+*.pubxml
+*.pubxml.user
+
+# Node and Vue
+node_modules/
+dist/
+.quasar/
+.vite/
+coverage/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Logs
+logs/
+*.log
+
+# IDE and editor files
+.vs/
+.vscode/
+.idea/
+*.DotSettings.user
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
