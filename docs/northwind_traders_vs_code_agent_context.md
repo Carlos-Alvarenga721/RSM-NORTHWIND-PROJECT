@@ -49,9 +49,9 @@ All source code, variables, classes, methods, files, folders, API routes, databa
 - Swagger/OpenAPI for API documentation.
 
 ### Database
-- SQL Server Managment 2022.
+- SQL Server running in Docker for local development.
 - Northwind sample database.
-- Use the provided `instnwnd.sql` script to have context about the DB
+- Use the provided `instnwnd.sql` script to create the database schema and seed data.
 - Use Entity Framework Core Database First / reverse engineering.
 - Main Northwind tables:
   - Orders.
@@ -105,7 +105,7 @@ Use these decisions unless the user explicitly changes them:
 - Use xUnit + Moq + FluentAssertions for backend tests.
 - Do not implement authentication/login unless explicitly requested.
 - Treat frontend tests as bonus.
-- Treat Docker as final bonus, not first implementation priority.
+- Use Docker now for the SQL Server development database. Treat full API/frontend containerization as final bonus.
 - Use corporate dashboard UI style similar to the project sample.
 - Keep all code and naming in English.
 
@@ -710,7 +710,7 @@ Recommended configuration sections:
 ```json
 {
   "ConnectionStrings": {
-    "NorthwindDatabase": "Server=localhost;Database=Northwind;Trusted_Connection=True;TrustServerCertificate=True;"
+    "NorthwindDatabase": "Server=localhost,1433;Database=Northwind;User Id=sa;Password=DO_NOT_COMMIT_REAL_PASSWORD;TrustServerCertificate=True;"
   },
   "GoogleMaps": {
     "ApiKey": "DO_NOT_COMMIT_REAL_KEY",
@@ -731,6 +731,7 @@ Rules:
 - Use configuration binding for typed options.
 - Keep API keys out of frontend when validation can be done through backend.
 - If the frontend requires Maps JavaScript API key for map rendering, restrict the key by HTTP referrer in Google Cloud Console.
+- While the API runs locally and SQL Server runs in Docker, use `localhost,1433` as the SQL Server host. If the API later runs inside Docker Compose, change the SQL Server host from `localhost` to `sqlserver`.
 
 ---
 
@@ -791,7 +792,7 @@ Database:
 Recommended build order:
 
 1. Create backend solution and projects.
-2. Create SQL Server Northwind database from `instnwnd.sql`.
+2. Create SQL Server Docker container and load the Northwind database from `instnwnd.sql`.
 3. Scaffold EF Core models from existing database.
 4. Create Clean Architecture references.
 5. Add Application interfaces.
