@@ -1,7 +1,10 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using NorthwindTraders.Application.Abstractions.Persistence;
 using NorthwindTraders.Infrastructure.Persistence.DbContext;
+using NorthwindTraders.Infrastructure.Persistence.Repositories;
+using NorthwindTraders.Infrastructure.Persistence.UnitOfWork;
 
 namespace NorthwindTraders.Infrastructure.DependencyInjection;
 
@@ -21,6 +24,13 @@ public static class DependencyInjection
 
         services.AddDbContext<NorthwindDbContext>(options =>
             options.UseSqlServer(connectionString));
+
+        services.AddScoped<ICustomerRepository, CustomerRepository>();
+        services.AddScoped<IEmployeeRepository, EmployeeRepository>();
+        services.AddScoped<IShipperRepository, ShipperRepository>();
+        services.AddScoped<IProductRepository, ProductRepository>();
+        services.AddScoped<IOrderRepository, OrderRepository>();
+        services.AddScoped<IUnitOfWork, UnitOfWork>();
 
         return services;
     }
