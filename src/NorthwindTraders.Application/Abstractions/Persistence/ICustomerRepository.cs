@@ -4,7 +4,7 @@ namespace NorthwindTraders.Application.Abstractions.Persistence;
 
 public interface ICustomerRepository
 {
-    Task<IReadOnlyList<CustomerLookupDto>> GetLookupAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<CustomerLookupResponse>> GetCustomersLookupAsync(CancellationToken cancellationToken = default);
 
     Task<bool> ExistsAsync(string customerId, CancellationToken cancellationToken = default);
 }

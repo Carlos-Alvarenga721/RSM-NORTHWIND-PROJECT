@@ -7,12 +7,12 @@ namespace NorthwindTraders.Infrastructure.Persistence.Repositories;
 
 public sealed class ShipperRepository(NorthwindDbContext dbContext) : IShipperRepository
 {
-    public async Task<IReadOnlyList<ShipperLookupDto>> GetLookupAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<ShipperLookupResponse>> GetShippersLookupAsync(CancellationToken cancellationToken = default)
     {
         return await dbContext.Shippers
             .AsNoTracking()
             .OrderBy(shipper => shipper.CompanyName)
-            .Select(shipper => new ShipperLookupDto(
+            .Select(shipper => new ShipperLookupResponse(
                 shipper.ShipperId,
                 shipper.CompanyName,
                 shipper.Phone))

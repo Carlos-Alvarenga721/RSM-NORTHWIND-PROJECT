@@ -7,17 +7,16 @@ namespace NorthwindTraders.Infrastructure.Persistence.Repositories;
 
 public sealed class CustomerRepository(NorthwindDbContext dbContext) : ICustomerRepository
 {
-    public async Task<IReadOnlyList<CustomerLookupDto>> GetLookupAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<CustomerLookupResponse>> GetCustomersLookupAsync(CancellationToken cancellationToken = default)
     {
         return await dbContext.Customers
             .AsNoTracking()
             .OrderBy(customer => customer.CompanyName)
-            .Select(customer => new CustomerLookupDto(
+            .Select(customer => new CustomerLookupResponse(
                 customer.CustomerId,
                 customer.CompanyName,
                 customer.ContactName,
                 customer.City,
-                customer.Region,
                 customer.Country))
             .ToListAsync(cancellationToken);
     }

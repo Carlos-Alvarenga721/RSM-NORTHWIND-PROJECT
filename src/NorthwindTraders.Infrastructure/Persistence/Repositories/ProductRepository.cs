@@ -7,17 +7,19 @@ namespace NorthwindTraders.Infrastructure.Persistence.Repositories;
 
 public sealed class ProductRepository(NorthwindDbContext dbContext) : IProductRepository
 {
-    public async Task<IReadOnlyList<ProductLookupDto>> GetLookupAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<ProductLookupResponse>> GetProductsLookupAsync(CancellationToken cancellationToken = default)
     {
         return await dbContext.Products
             .AsNoTracking()
             .OrderBy(product => product.ProductName)
-            .Select(product => new ProductLookupDto(
+            .Select(product => new ProductLookupResponse(
                 product.ProductId,
                 product.ProductName,
                 product.UnitPrice,
                 product.UnitsInStock,
-                product.Discontinued))
+                product.Discontinued,
+                product.CategoryId,
+                product.Category == null ? null : product.Category.CategoryName))
             .ToListAsync(cancellationToken);
     }
 

@@ -4,7 +4,7 @@ namespace NorthwindTraders.Application.Abstractions.Persistence;
 
 public interface IEmployeeRepository
 {
-    Task<IReadOnlyList<EmployeeLookupDto>> GetLookupAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<EmployeeLookupResponse>> GetEmployeesLookupAsync(CancellationToken cancellationToken = default);
 
     Task<bool> ExistsAsync(int employeeId, CancellationToken cancellationToken = default);
 }

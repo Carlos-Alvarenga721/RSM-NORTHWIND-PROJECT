@@ -7,13 +7,13 @@ namespace NorthwindTraders.Infrastructure.Persistence.Repositories;
 
 public sealed class EmployeeRepository(NorthwindDbContext dbContext) : IEmployeeRepository
 {
-    public async Task<IReadOnlyList<EmployeeLookupDto>> GetLookupAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<EmployeeLookupResponse>> GetEmployeesLookupAsync(CancellationToken cancellationToken = default)
     {
         return await dbContext.Employees
             .AsNoTracking()
             .OrderBy(employee => employee.LastName)
             .ThenBy(employee => employee.FirstName)
-            .Select(employee => new EmployeeLookupDto(
+            .Select(employee => new EmployeeLookupResponse(
                 employee.EmployeeId,
                 employee.FirstName + " " + employee.LastName,
                 employee.Title,

@@ -1,16 +1,16 @@
 using Microsoft.AspNetCore.Mvc;
-using NorthwindTraders.Application.UseCases.Lookups;
+using NorthwindTraders.Application.UseCases.Shippers.GetShippersLookup;
 
 namespace NorthwindTraders.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public sealed class ShippersController(GetShipperLookupUseCase getShipperLookupUseCase) : ControllerBase
+public sealed class ShippersController(GetShippersLookupUseCase getShippersLookupUseCase) : ControllerBase
 {
     [HttpGet]
     public async Task<IActionResult> GetAsync(CancellationToken cancellationToken)
     {
-        var shippers = await getShipperLookupUseCase.ExecuteAsync(cancellationToken);
+        var shippers = await getShippersLookupUseCase.ExecuteAsync(cancellationToken);
 
         return Ok(shippers);
     }

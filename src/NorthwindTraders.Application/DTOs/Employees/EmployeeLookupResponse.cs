@@ -1,6 +1,6 @@
 namespace NorthwindTraders.Application.DTOs.Employees;
 
-public sealed record EmployeeLookupDto(
+public sealed record EmployeeLookupResponse(
     int EmployeeId,
     string FullName,
     string? Title,

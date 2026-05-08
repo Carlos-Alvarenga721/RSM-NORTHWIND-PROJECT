@@ -49,9 +49,9 @@ All source code, variables, classes, methods, files, folders, API routes, databa
 - Swagger/OpenAPI for API documentation.
 
 ### Database
-- SQL Server running in Docker for local development.
+- SQL Server Managment 2022.
 - Northwind sample database.
-- Use the provided `instnwnd.sql` script to create the database schema and seed data.
+- Use the provided `instnwnd.sql` script to have context about the DB
 - Use Entity Framework Core Database First / reverse engineering.
 - Main Northwind tables:
   - Orders.
@@ -105,7 +105,7 @@ Use these decisions unless the user explicitly changes them:
 - Use xUnit + Moq + FluentAssertions for backend tests.
 - Do not implement authentication/login unless explicitly requested.
 - Treat frontend tests as bonus.
-- Use Docker now for the SQL Server development database. Treat full API/frontend containerization as final bonus.
+- Treat Docker as final bonus, not first implementation priority.
 - Use corporate dashboard UI style similar to the project sample.
 - Keep all code and naming in English.
 
@@ -710,7 +710,7 @@ Recommended configuration sections:
 ```json
 {
   "ConnectionStrings": {
-    "NorthwindDatabase": "Server=localhost,1433;Database=Northwind;User Id=sa;Password=DO_NOT_COMMIT_REAL_PASSWORD;TrustServerCertificate=True;"
+    "NorthwindDatabase": "Server=localhost;Database=Northwind;Trusted_Connection=True;TrustServerCertificate=True;"
   },
   "GoogleMaps": {
     "ApiKey": "DO_NOT_COMMIT_REAL_KEY",
@@ -731,7 +731,6 @@ Rules:
 - Use configuration binding for typed options.
 - Keep API keys out of frontend when validation can be done through backend.
 - If the frontend requires Maps JavaScript API key for map rendering, restrict the key by HTTP referrer in Google Cloud Console.
-- While the API runs locally and SQL Server runs in Docker, use `localhost,1433` as the SQL Server host. If the API later runs inside Docker Compose, change the SQL Server host from `localhost` to `sqlserver`.
 
 ---
 
@@ -787,35 +786,29 @@ Database:
 
 ---
 
-## 14. Suggested Implementation Order
+## 14. Official Prompt Implementation Order
 
-Recommended build order:
+Use this prompt order when working with Codex or another AI agent. Complete one prompt, verify that the solution builds, review the generated structure, commit the result, and only then move to the next prompt.
 
-1. Create backend solution and projects.
-2. Create SQL Server Docker container and load the Northwind database from `instnwnd.sql`.
-3. Scaffold EF Core models from existing database.
-4. Create Clean Architecture references.
-5. Add Application interfaces.
-6. Add Repository + Unit of Work implementation.
-7. Implement basic Orders CRUD backend.
-8. Add Customers, Employees, Shippers, Products lookup endpoints.
-9. Add FluentValidation.
-10. Add global error handling.
-11. Add Swagger/OpenAPI.
-12. Create Quasar + Vue 3 + TypeScript frontend.
-13. Build Orders list page.
-14. Build Create/Edit Order page.
-15. Add product line items table.
-16. Add address validation backend service.
-17. Add Google Maps integration in frontend.
-18. Add PDF generation for order detail.
-19. Add reports dashboard backend endpoints.
-20. Add dashboard UI with charts and filters.
-21. Add Excel export.
-22. Add PDF export for report table if time allows.
-23. Add backend unit tests.
-24. Add documentation.
-25. Add Docker as final bonus if time remains.
+1. Prompt 1: Normalize repository structure.
+2. Prompt 2: Create .NET solution and Clean Architecture projects.
+3. Prompt 3: Install backend packages and create base folders.
+4. Prompt 4: Configure appsettings and prepare EF Core scaffold.
+5. Prompt 5: Scaffold Northwind database entities.
+6. Prompt 6: Create lookup endpoints.
+7. Prompt 7: Create Orders CRUD backend.
+8. Prompt 8: Create Quasar TypeScript frontend.
+9. Prompt 9: Build Orders UI.
+10. Prompt 10: Add Google Maps address validation.
+11. Prompt 11: Add reports dashboard.
+12. Prompt 12: Add PDF and Excel export.
+13. Prompt 13: Add backend tests.
+14. Prompt 14: Final README and cleanup.
+
+Important sequencing rule:
+- Do not start Orders CRUD before lookup endpoints are finished and manually tested.
+- Do not start the frontend before the backend lookup endpoints and Orders CRUD are stable.
+- Do not start Google Maps, reports, PDF, or Excel before the core order workflow exists.
 
 ---
 
@@ -864,3 +857,184 @@ When generating code for this project:
 10. Keep frontend API calls in service modules.
 11. Keep backend external integrations behind interfaces.
 12. Explain any assumption before applying it if it affects architecture, database schema, or external services.
+
+---
+
+## 17. Current Project Progress
+
+This section summarizes the current implementation state so a new chat or AI agent can continue without losing context.
+
+### 17.1 Current Repository Structure
+
+Current project root:
+
+```text
+RSM FINAL PROJECT/
+├── .github/copilot-instructions.md
+├── database/instnwnd.sql
+├── docs/northwind_traders_vs_code_agent_context.md
+├── src/
+│   ├── NorthwindTraders.Api/
+│   ├── NorthwindTraders.Application/
+│   ├── NorthwindTraders.Domain/
+│   └── NorthwindTraders.Infrastructure/
+├── tests/NorthwindTraders.UnitTests/
+├── client/
+├── docker-compose.yml
+├── .env.example
+├── .gitignore
+├── AGENTS.md
+├── global.json
+├── NorthwindTraders.sln
+└── README.md
+```
+
+### 17.2 Completed Work
+
+The following work has already been completed or prepared:
+
+1. Repository structure was normalized for the final project.
+2. Clean Architecture backend solution was created.
+3. Backend projects were created:
+   - `NorthwindTraders.Api`
+   - `NorthwindTraders.Application`
+   - `NorthwindTraders.Domain`
+   - `NorthwindTraders.Infrastructure`
+4. Unit test project was created:
+   - `NorthwindTraders.UnitTests`
+5. Project references were configured between backend projects.
+6. Initial backend NuGet packages were installed.
+7. Base folders were created inside the backend projects.
+8. A placeholder xUnit test was added.
+9. `dotnet restore` works.
+10. `dotnet build` works.
+11. `dotnet test` works with at least one test.
+12. SQL Server is running through Docker for local development.
+13. `docker-compose.yml` was added only for SQL Server, not full application Dockerization.
+14. `.env.example` was added.
+15. Local `.env` exists but must not be committed.
+16. SQL Server container name:
+   - `northwind-sqlserver`
+17. Northwind database was created inside the SQL Server container.
+18. `instnwnd.sql` was executed successfully.
+19. Northwind table counts were validated successfully for key tables such as Customers, Orders, and Products.
+20. The API still runs locally for now and connects to SQL Server through `localhost,1433`.
+21. When the API is eventually moved into Docker Compose, the SQL Server host must change from `localhost` to the Docker service name, expected to be `sqlserver`.
+22. EF Core Database First scaffold was completed from the Dockerized SQL Server Northwind database.
+23. Generated EF Core persistence models and `NorthwindDbContext` are located in `NorthwindTraders.Infrastructure`.
+24. The scaffold used `--no-onconfiguring` to avoid storing the connection string inside the generated DbContext.
+25. Source checks were run to confirm the real local SQL Server password was not committed.
+26. Application persistence abstractions were added for lookup/read support and future Orders CRUD.
+27. Infrastructure repository implementations were added for lookup/read support and future Orders CRUD.
+28. Unit of Work abstraction and implementation were added.
+29. Prompt 6 was completed with read-only lookup endpoints for customers, employees, shippers, and products.
+30. Application lookup response DTOs and use cases were added for order selector data.
+31. Infrastructure repository lookup queries use `AsNoTracking()` and project EF entities into Application response DTOs.
+32. Thin API controllers were added for lookup endpoints without injecting `NorthwindDbContext` directly.
+33. `dotnet restore`, `dotnet build`, and `dotnet test` were confirmed passing after Prompt 6.
+
+### 17.3 Current Database and Configuration Decisions
+
+Local development connection string shape:
+
+```text
+Server=localhost,1433;Database=Northwind;User Id=sa;Password=<local-sa-password>;TrustServerCertificate=True;
+```
+
+Rules:
+- Do not commit the real local password.
+- Do not commit `.env`.
+- Use user-secrets for the local API connection string.
+- Use `Name=ConnectionStrings:NorthwindDatabase` when scaffolding with EF Core.
+- Keep `--no-onconfiguring` in EF Core scaffold commands.
+- Keep generated EF Core entities and `NorthwindDbContext` inside `NorthwindTraders.Infrastructure` only.
+
+### 17.4 Current Implementation Boundary
+
+The project is currently around the transition from lookup endpoints into Orders CRUD backend planning.
+
+Completed or considered completed:
+- Prompt 1: Normalize repository structure.
+- Prompt 2: Create .NET solution and Clean Architecture projects.
+- Prompt 3: Install backend packages and create base folders.
+- Prompt 4: Configure appsettings and prepare EF Core scaffold.
+- Prompt 5: Scaffold Northwind database entities.
+- Prompt 6: Create lookup endpoints.
+- Extra backend preparation: Application persistence abstractions, Infrastructure repositories, and Unit of Work base.
+
+Next task:
+- Prompt 7: Create Orders CRUD backend.
+
+Do not start Prompt 7, Orders CRUD backend, until explicitly requested.
+
+### 17.5 Completed Task Details: Prompt 6
+
+Prompt 6 must create read-only lookup endpoints required by the future order form:
+
+```text
+GET /api/customers
+GET /api/employees
+GET /api/shippers
+GET /api/products
+```
+
+Expected flow:
+
+```text
+API Controller → Application Use Case → Repository Interface → Infrastructure Repository → NorthwindDbContext → SQL Server
+```
+
+Expected Application use cases:
+- `GetCustomersLookupUseCase`
+- `GetEmployeesLookupUseCase`
+- `GetShippersLookupUseCase`
+- `GetProductsLookupUseCase`
+
+Expected API controllers:
+- `CustomersController`
+- `EmployeesController`
+- `ShippersController`
+- `ProductsController`
+
+Validation completed after Prompt 6:
+
+```bash
+dotnet restore
+dotnet build
+dotnet test
+```
+
+Manual API checks for local development:
+
+```text
+/api/customers
+/api/employees
+/api/shippers
+/api/products
+```
+
+Expected result:
+- Each endpoint returns HTTP 200.
+- Each endpoint returns JSON arrays from the Northwind database.
+- Controllers stay thin.
+- No DbContext is injected directly into controllers.
+- No Orders CRUD is started yet.
+
+### 17.6 Current Git Safety Rules
+
+Before every commit:
+
+```bash
+git status
+dotnet build
+dotnet test
+git grep -n "Northwind@2025Dev"
+```
+
+Expected:
+- Build passes.
+- Tests pass.
+- `.env` is not staged.
+- No real local password appears in tracked files.
+
+Safe placeholder strings such as `Password=DO_NOT_COMMIT_REAL_PASSWORD` are acceptable in documentation, but real local secrets are not.
