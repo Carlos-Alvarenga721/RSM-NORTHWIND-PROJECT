@@ -15,6 +15,8 @@ public sealed class CreateOrderUseCase(
 
         var createdOrder = await orderRepository.AddAsync(request, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
+        await orderRepository.AddDetailsAsync(createdOrder.OrderId, request.Details, cancellationToken);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
 
         return await orderRepository.GetByIdAsync(createdOrder.OrderId, cancellationToken)
             ?? throw new InvalidOperationException($"Created order {createdOrder.OrderId} could not be loaded.");

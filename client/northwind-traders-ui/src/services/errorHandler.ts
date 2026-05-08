@@ -10,7 +10,19 @@ export function getApiErrorMessage(error: unknown): string {
       return Object.values(problem.errors).flat().join(' ');
     }
 
-    return problem?.detail || problem?.title || error.message;
+    if (problem?.detail || problem?.title) {
+      return problem.detail || problem.title || 'The request could not be completed.';
+    }
+
+    if (error.response?.status === 404) {
+      return 'The requested feature or resource is not available.';
+    }
+
+    if (error.response?.status && error.response.status >= 500) {
+      return 'The server could not complete the request. Please try again.';
+    }
+
+    return 'The request could not be completed. Please review the information and try again.';
   }
 
   return error instanceof Error ? error.message : 'An unexpected error occurred.';

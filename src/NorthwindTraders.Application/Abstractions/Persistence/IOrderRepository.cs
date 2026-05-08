@@ -10,6 +10,11 @@ public interface IOrderRepository
 
     Task<CreatedOrderReference> AddAsync(CreateOrderRequest request, CancellationToken cancellationToken = default);
 
+    Task AddDetailsAsync(
+        int orderId,
+        IReadOnlyList<OrderDetailRequest> details,
+        CancellationToken cancellationToken = default);
+
     Task UpdateAsync(int orderId, UpdateOrderRequest request, CancellationToken cancellationToken = default);
 
     Task DeleteAsync(int orderId, CancellationToken cancellationToken = default);

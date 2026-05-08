@@ -47,6 +47,18 @@ public sealed class OrderRepository(NorthwindDbContext dbContext) : IOrderReposi
         return new CreatedOrderReference(() => order.OrderId);
     }
 
+    public Task AddDetailsAsync(
+        int orderId,
+        IReadOnlyList<OrderDetailRequest> details,
+        CancellationToken cancellationToken = default)
+    {
+        var orderDetails = details.Select(detail => MapDetail(detail, orderId));
+
+        dbContext.OrderDetails.AddRange(orderDetails);
+
+        return Task.CompletedTask;
+    }
+
     public async Task UpdateAsync(int orderId, UpdateOrderRequest request, CancellationToken cancellationToken = default)
     {
         var order = await dbContext.Orders
@@ -78,7 +90,7 @@ public sealed class OrderRepository(NorthwindDbContext dbContext) : IOrderReposi
             }
             else
             {
-                order.OrderDetails.Add(MapDetail(detail));
+                order.OrderDetails.Add(MapDetail(detail, orderId));
             }
         }
     }
@@ -114,7 +126,6 @@ public sealed class OrderRepository(NorthwindDbContext dbContext) : IOrderReposi
         order.ShipRegion = request.ShipRegion;
         order.ShipPostalCode = request.ShipPostalCode;
         order.ShipCountry = request.ShipCountry;
-        order.OrderDetails = request.Details.Select(MapDetail).ToList();
     }
 
     private static void ApplyOrderValues(Order order, UpdateOrderRequest request)
@@ -143,6 +154,14 @@ public sealed class OrderRepository(NorthwindDbContext dbContext) : IOrderReposi
             Quantity = detail.Quantity,
             Discount = detail.Discount
         };
+    }
+
+    private static OrderDetail MapDetail(OrderDetailRequest detail, int orderId)
+    {
+        var orderDetail = MapDetail(detail);
+        orderDetail.OrderId = orderId;
+
+        return orderDetail;
     }
 
     private static OrderSummaryResponse MapSummary(Order order)

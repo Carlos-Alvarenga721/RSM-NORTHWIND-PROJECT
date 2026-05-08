@@ -40,7 +40,7 @@ public sealed class OrdersController(
     {
         var order = await createOrderUseCase.ExecuteAsync(request, cancellationToken);
 
-        return CreatedAtAction(nameof(GetByIdAsync), new { orderId = order.OrderId }, order);
+        return Created($"/api/orders/{order.OrderId}", order);
     }
 
     [HttpPut("{orderId:int}")]

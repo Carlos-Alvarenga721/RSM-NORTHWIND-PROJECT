@@ -20,6 +20,12 @@ public sealed class CreateOrderUseCaseTests
             .Setup(repository => repository.AddAsync(request, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new CreatedOrderReference(() => createdOrder.OrderId));
         orderRepository
+            .Setup(repository => repository.AddDetailsAsync(
+                createdOrder.OrderId,
+                request.Details,
+                It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        orderRepository
             .Setup(repository => repository.GetByIdAsync(createdOrder.OrderId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(createdOrder);
 
@@ -36,7 +42,13 @@ public sealed class CreateOrderUseCaseTests
 
         result.Should().BeEquivalentTo(createdOrder);
         orderRepository.Verify(repository => repository.AddAsync(request, It.IsAny<CancellationToken>()), Times.Once);
-        unitOfWork.Verify(work => work.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        orderRepository.Verify(
+            repository => repository.AddDetailsAsync(
+                createdOrder.OrderId,
+                request.Details,
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+        unitOfWork.Verify(work => work.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Exactly(2));
     }
 
     private static CreateOrderRequest CreateOrderRequest()
