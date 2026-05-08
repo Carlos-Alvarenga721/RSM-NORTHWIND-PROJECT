@@ -932,6 +932,25 @@ The following work has already been completed or prepared:
 31. Infrastructure repository lookup queries use `AsNoTracking()` and project EF entities into Application response DTOs.
 32. Thin API controllers were added for lookup endpoints without injecting `NorthwindDbContext` directly.
 33. `dotnet restore`, `dotnet build`, and `dotnet test` were confirmed passing after Prompt 6.
+34. Prompt 7 was implemented with complete Orders CRUD backend functionality.
+35. `OrdersController` was added with thin REST endpoints for list, detail, create, update, and delete.
+36. Orders Application DTOs were added under `NorthwindTraders.Application/DTOs/Orders`.
+37. Orders Application use cases were added under `NorthwindTraders.Application/UseCases/Orders`.
+38. `IOrderRepository` was expanded to support Orders CRUD operations.
+39. `OrderRepository` now maps between Application DTOs and EF Core Northwind persistence entities.
+40. Order creation and update use `IUnitOfWork.SaveChangesAsync`.
+41. FluentValidation validators were added for create/update order requests and order detail requests.
+42. Order business rule constants were added in Domain under `NorthwindTraders.Domain/Orders/OrderBusinessRules.cs`.
+43. API exception handling middleware was added to convert FluentValidation errors to 400 and not-found errors to 404.
+44. Unit tests were added for Orders controller and selected Orders use cases.
+45. Prompt 8 frontend scaffold was created under `client/northwind-traders-ui`.
+46. The frontend uses Vue 3, Quasar, TypeScript, Vue Router, Pinia, Axios, Chart.js, and vue-chartjs.
+47. Frontend pages were added for orders list, order create/edit form, order detail, and reports dashboard.
+48. Frontend reusable components were added for selectors, order form, line items, address validation, validated address display, map preview, and charts.
+49. Frontend typed API services and TypeScript API contracts were added for orders, lookups, address validation, reports, PDF, Excel, and error handling.
+50. Google Maps address validation backend has not been implemented yet, but the frontend service and UI are prepared for `POST /api/address-validation/validate`.
+51. Reports, PDF export, and Excel export backend endpoints have not been implemented yet, but the frontend services and UI are prepared for the expected routes.
+52. No EF Core migrations have been created. The project is still using Database First against the existing Northwind schema.
 
 ### 17.3 Current Database and Configuration Decisions
 
@@ -951,7 +970,7 @@ Rules:
 
 ### 17.4 Current Implementation Boundary
 
-The project is currently around the transition from lookup endpoints into Orders CRUD backend planning.
+The project has completed the lookup endpoints, Orders CRUD backend, and the first Vue 3 + Quasar + TypeScript frontend scaffold.
 
 Completed or considered completed:
 - Prompt 1: Normalize repository structure.
@@ -960,12 +979,14 @@ Completed or considered completed:
 - Prompt 4: Configure appsettings and prepare EF Core scaffold.
 - Prompt 5: Scaffold Northwind database entities.
 - Prompt 6: Create lookup endpoints.
-- Extra backend preparation: Application persistence abstractions, Infrastructure repositories, and Unit of Work base.
+- Prompt 7: Create Orders CRUD backend.
+- Prompt 8: Create Quasar TypeScript frontend scaffold.
+- Extra backend preparation: Application persistence abstractions, Infrastructure repositories, Unit of Work base, global exception handling middleware, and focused backend tests.
 
 Next task:
-- Prompt 7: Create Orders CRUD backend.
+- Prompt 9: Build and harden the Orders UI against the live backend after frontend dependencies can be installed.
 
-Do not start Prompt 7, Orders CRUD backend, until explicitly requested.
+Do not start Prompt 9 UI hardening until explicitly requested.
 
 ### 17.5 Completed Task Details: Prompt 6
 
@@ -1018,9 +1039,215 @@ Expected result:
 - Each endpoint returns JSON arrays from the Northwind database.
 - Controllers stay thin.
 - No DbContext is injected directly into controllers.
-- No Orders CRUD is started yet.
+- Orders CRUD is now implemented in Prompt 7.
 
-### 17.6 Current Git Safety Rules
+### 17.6 Completed Task Details: Prompt 7
+
+Prompt 7 implemented the complete backend Orders CRUD workflow.
+
+Implemented API endpoints:
+
+```text
+GET    /api/orders
+GET    /api/orders/{orderId}
+POST   /api/orders
+PUT    /api/orders/{orderId}
+DELETE /api/orders/{orderId}
+```
+
+Expected flow:
+
+```text
+OrdersController → Application Use Case → IOrderRepository/IUnitOfWork → OrderRepository → NorthwindDbContext → SQL Server
+```
+
+Important files added or updated:
+
+```text
+src/NorthwindTraders.Api/Controllers/OrdersController.cs
+src/NorthwindTraders.Api/Middleware/ExceptionHandlingMiddleware.cs
+src/NorthwindTraders.Api/Program.cs
+src/NorthwindTraders.Application/Abstractions/Persistence/IOrderRepository.cs
+src/NorthwindTraders.Application/Abstractions/Persistence/CreatedOrderReference.cs
+src/NorthwindTraders.Application/Common/Exceptions/NotFoundException.cs
+src/NorthwindTraders.Application/DTOs/Orders/
+src/NorthwindTraders.Application/UseCases/Orders/
+src/NorthwindTraders.Application/DependencyInjection/DependencyInjection.cs
+src/NorthwindTraders.Domain/Orders/OrderBusinessRules.cs
+src/NorthwindTraders.Infrastructure/Persistence/Repositories/OrderRepository.cs
+tests/NorthwindTraders.UnitTests/Api/Controllers/OrdersControllerTests.cs
+tests/NorthwindTraders.UnitTests/Application/Orders/
+```
+
+Orders DTOs currently include:
+- `CreateOrderRequest`
+- `UpdateOrderRequest`
+- `OrderDetailRequest`
+- `OrderResponse`
+- `OrderDetailResponse`
+- `OrderSummaryResponse`
+
+Orders use cases currently include:
+- `GetOrdersUseCase`
+- `GetOrderByIdUseCase`
+- `CreateOrderUseCase`
+- `UpdateOrderUseCase`
+- `DeleteOrderUseCase`
+
+Current Orders validation rules:
+- `CustomerId` is required, max 5 characters, and must reference an existing customer.
+- `EmployeeId` must be greater than zero and must reference an existing employee.
+- `ShipVia` is optional, but when provided must reference an existing shipper.
+- `Freight` must be zero or greater.
+- Ship fields follow Northwind column length limits.
+- An order must contain at least one detail.
+- An order cannot contain duplicate products.
+- Each order detail must reference an existing product.
+- `UnitPrice` must be zero or greater.
+- `Quantity` must be at least 1.
+- `Discount` must be between 0 and 1.
+
+Current API error behavior:
+- FluentValidation failures return HTTP 400 with validation problem details.
+- `NotFoundException` returns HTTP 404 with problem details.
+- Controllers remain thin and do not inject `NorthwindDbContext` directly.
+
+Important implementation notes:
+- `OrderRepository.AddAsync` returns `CreatedOrderReference` so the Application layer can read the database-generated `OrderId` after `SaveChangesAsync` without referencing EF entities.
+- `OrderRepository.UpdateAsync` updates existing order detail rows in place when product IDs remain, removes missing details, and adds new details. This avoids EF Core tracking conflicts with the Northwind `Order Details` composite key.
+- `OrderRepository.DeleteAsync` removes order details before deleting the order.
+- Order totals are calculated as line item totals plus freight.
+- No database schema changes or migrations were added for Prompt 7.
+
+Validation attempted after Prompt 7:
+
+```bash
+git diff --check -- <Prompt 7 touched files>
+```
+
+Result:
+- Passed for files touched by Prompt 7.
+
+Build/test status after Prompt 7:
+- `dotnet build` and `dotnet test` were not successfully executed from the current WSL shell.
+- `dotnet` was not available on the WSL `PATH`.
+- Windows `dotnet.exe` exists at `/mnt/c/Program Files/dotnet/dotnet.exe`, but invoking it from WSL failed before MSBuild started with:
+
+```text
+WSL (2) ERROR: UtilBindVsockAnyPort:287: socket failed 1
+```
+
+Before moving to Prompt 8, run these commands from an environment where the .NET SDK is available:
+
+```bash
+dotnet restore
+dotnet build
+dotnet test
+```
+
+Manual API checks recommended after build:
+
+```text
+GET    /api/orders
+GET    /api/orders/10248
+POST   /api/orders
+PUT    /api/orders/{existingOrderId}
+DELETE /api/orders/{testOrderId}
+```
+
+Use a test-created order for delete checks to avoid removing original Northwind sample data unintentionally.
+
+### 17.7 Completed Task Details: Prompt 8
+
+Prompt 8 created the Quasar TypeScript frontend scaffold.
+
+Frontend root:
+
+```text
+client/northwind-traders-ui/
+```
+
+Important frontend files added:
+
+```text
+client/northwind-traders-ui/package.json
+client/northwind-traders-ui/quasar.config.ts
+client/northwind-traders-ui/tsconfig.json
+client/northwind-traders-ui/src/App.vue
+client/northwind-traders-ui/src/boot/axios.ts
+client/northwind-traders-ui/src/boot/pinia.ts
+client/northwind-traders-ui/src/router/
+client/northwind-traders-ui/src/layouts/MainLayout.vue
+client/northwind-traders-ui/src/pages/OrdersPage.vue
+client/northwind-traders-ui/src/pages/OrderFormPage.vue
+client/northwind-traders-ui/src/pages/OrderDetailPage.vue
+client/northwind-traders-ui/src/pages/ReportsDashboardPage.vue
+client/northwind-traders-ui/src/components/orders/
+client/northwind-traders-ui/src/components/maps/
+client/northwind-traders-ui/src/components/reports/
+client/northwind-traders-ui/src/services/
+client/northwind-traders-ui/src/stores/
+client/northwind-traders-ui/src/types/
+```
+
+Frontend routes:
+
+```text
+/orders
+/orders/new
+/orders/:orderId
+/orders/:orderId/edit
+/reports
+```
+
+Frontend API services currently target:
+
+```text
+GET    /api/orders
+GET    /api/orders/{orderId}
+POST   /api/orders
+PUT    /api/orders/{orderId}
+DELETE /api/orders/{orderId}
+GET    /api/customers
+GET    /api/employees
+GET    /api/shippers
+GET    /api/products
+POST   /api/address-validation/validate
+GET    /api/reports/orders
+GET    /api/reports/orders/export/excel
+GET    /api/reports/orders/export/pdf
+GET    /api/orders/{orderId}/report/pdf
+```
+
+Frontend implementation notes:
+- Uses Pinia stores for orders, lookup data, and report data.
+- Uses Axios through a typed API client.
+- Uses Quasar Notify and Loading for user-facing feedback and long-running operations.
+- Uses Quasar Dialog for delete confirmation.
+- Uses Chart.js and vue-chartjs for dashboard charts.
+- Uses Google Maps embed URLs for map preview display.
+- Report, address validation, PDF, and Excel UI paths are prepared, but those backend endpoints are expected in later prompts.
+
+Frontend validation attempted after Prompt 8:
+
+```bash
+git diff --check -- client/northwind-traders-ui docs/northwind_traders_vs_code_agent_context.md
+```
+
+Build/run status after Prompt 8:
+- `node` is not available in the current WSL shell.
+- `npm` reports that WSL 1 is unsupported and cannot determine the Node.js install directory.
+- Because of this environment issue, dependencies were not installed and the Quasar dev server was not started from this shell.
+
+Before continuing frontend work, run from an environment with a working Node.js installation:
+
+```bash
+cd client/northwind-traders-ui
+npm install
+npm run dev
+```
+
+### 17.8 Current Git Safety Rules
 
 Before every commit:
 

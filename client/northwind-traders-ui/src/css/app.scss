@@ -1,0 +1,67 @@
+:root {
+  --nw-bg: #f5f7fa;
+  --nw-border: #d8dee8;
+  --nw-text: #1f2933;
+  --nw-muted: #667085;
+  --nw-primary: #28527a;
+  --nw-accent: #2f7d6d;
+  --nw-warning: #b7791f;
+}
+
+body {
+  background: var(--nw-bg);
+  color: var(--nw-text);
+  font-family: Inter, Roboto, Arial, sans-serif;
+}
+
+.page-shell {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.page-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.page-title {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.page-subtitle {
+  color: var(--nw-muted);
+  margin-top: 4px;
+}
+
+.panel {
+  background: #ffffff;
+  border: 1px solid var(--nw-border);
+  border-radius: 8px;
+}
+
+.panel-section {
+  padding: 16px;
+}
+
+.metric-value {
+  font-size: 26px;
+  font-weight: 700;
+}
+
+.metric-label {
+  color: var(--nw-muted);
+  font-size: 13px;
+}
+
+.table-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
