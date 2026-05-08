@@ -11,18 +11,42 @@
     <section class="panel">
       <div class="panel-section">
         <div class="row q-col-gutter-md q-mb-md">
-          <div class="col-12 col-md-6">
+          <div class="col-12 col-md-4">
             <q-input v-model="search" outlined dense debounce="250" label="Search orders">
               <template #prepend>
                 <q-icon name="search" />
               </template>
             </q-input>
           </div>
-          <div class="col-12 col-md-3">
-            <q-input v-model="countryFilter" outlined dense debounce="250" label="Ship country" />
+          <div class="col-12 col-md-2">
+            <q-select
+              v-model="yearFilter"
+              outlined
+              dense
+              clearable
+              emit-value
+              map-options
+              :options="yearOptions"
+              label="Year"
+            />
           </div>
-          <div class="col-12 col-md-3">
-            <q-input v-model="cityFilter" outlined dense debounce="250" label="Ship city" />
+          <div class="col-12 col-md-2">
+            <q-select
+              v-model="monthFilter"
+              outlined
+              dense
+              clearable
+              emit-value
+              map-options
+              :options="monthOptions"
+              label="Month"
+            />
+          </div>
+          <div class="col-12 col-md-2">
+            <q-input v-model="regionFilter" outlined dense debounce="250" label="Ship region" />
+          </div>
+          <div class="col-12 col-md-2">
+            <q-input v-model="countryFilter" outlined dense debounce="250" label="Ship country" />
           </div>
         </div>
 
@@ -40,6 +64,9 @@
           </template>
           <template #body-cell-orderTotal="scope">
             <q-td :props="scope">{{ formatCurrency(scope.row.orderTotal) }}</q-td>
+          </template>
+          <template #body-cell-freight="scope">
+            <q-td :props="scope">{{ formatCurrency(scope.row.freight) }}</q-td>
           </template>
           <template #body-cell-actions="scope">
             <q-td :props="scope">
@@ -73,7 +100,9 @@ import type { OrderSummaryResponse } from 'src/types/orders';
 const orderStore = useOrderStore();
 const search = ref('');
 const countryFilter = ref('');
-const cityFilter = ref('');
+const regionFilter = ref('');
+const yearFilter = ref<number | null>(null);
+const monthFilter = ref<number | null>(null);
 const pagination = ref({
   page: 1,
   rowsPerPage: 10,
@@ -87,19 +116,44 @@ const columns: QTableColumn<OrderSummaryResponse>[] = [
   { name: 'employeeName', label: 'Employee', field: 'employeeName', sortable: true, align: 'left' },
   { name: 'orderDate', label: 'Order Date', field: 'orderDate', sortable: true, align: 'left' },
   { name: 'shipperName', label: 'Shipper', field: 'shipperName', sortable: true, align: 'left' },
-  { name: 'shipCity', label: 'Ship City', field: 'shipCity', sortable: true, align: 'left' },
+  { name: 'shipRegion', label: 'Region', field: 'shipRegion', sortable: true, align: 'left' },
   { name: 'shipCountry', label: 'Ship Country', field: 'shipCountry', sortable: true, align: 'left' },
+  { name: 'freight', label: 'Freight', field: 'freight', sortable: true, align: 'right' },
   { name: 'detailCount', label: 'Items', field: 'detailCount', sortable: true, align: 'right' },
   { name: 'orderTotal', label: 'Total', field: 'orderTotal', sortable: true, align: 'right' },
   { name: 'actions', label: '', field: 'orderId', align: 'right' },
 ];
 
+const monthOptions = [
+  { label: 'January', value: 1 },
+  { label: 'February', value: 2 },
+  { label: 'March', value: 3 },
+  { label: 'April', value: 4 },
+  { label: 'May', value: 5 },
+  { label: 'June', value: 6 },
+  { label: 'July', value: 7 },
+  { label: 'August', value: 8 },
+  { label: 'September', value: 9 },
+  { label: 'October', value: 10 },
+  { label: 'November', value: 11 },
+  { label: 'December', value: 12 },
+];
+
+const yearOptions = computed(() =>
+  [...new Set(orderStore.orders
+    .map((order) => (order.orderDate ? new Date(order.orderDate).getFullYear() : null))
+    .filter((year): year is number => year !== null))]
+    .sort((left, right) => right - left)
+    .map((year) => ({ label: String(year), value: year })),
+);
+
 const filteredOrders = computed(() => {
   const term = search.value.toLowerCase();
   const country = countryFilter.value.toLowerCase();
-  const city = cityFilter.value.toLowerCase();
+  const region = regionFilter.value.toLowerCase();
 
   return orderStore.orders.filter((order) => {
+    const orderDate = order.orderDate ? new Date(order.orderDate) : null;
     const text = [
       order.orderId,
       order.customerId,
@@ -107,6 +161,7 @@ const filteredOrders = computed(() => {
       order.employeeName,
       order.shipperName,
       order.shipCity,
+      order.shipRegion,
       order.shipCountry,
     ]
       .join(' ')
@@ -115,7 +170,9 @@ const filteredOrders = computed(() => {
     return (
       (!term || text.includes(term)) &&
       (!country || (order.shipCountry || '').toLowerCase().includes(country)) &&
-      (!city || (order.shipCity || '').toLowerCase().includes(city))
+      (!region || (order.shipRegion || '').toLowerCase().includes(region)) &&
+      (!yearFilter.value || orderDate?.getFullYear() === yearFilter.value) &&
+      (!monthFilter.value || (orderDate?.getMonth() ?? -1) + 1 === monthFilter.value)
     );
   });
 });

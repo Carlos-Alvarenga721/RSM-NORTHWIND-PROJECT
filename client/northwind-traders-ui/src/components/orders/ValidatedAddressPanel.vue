@@ -6,8 +6,8 @@
           <div class="text-subtitle1 text-weight-bold">Validated Address</div>
           <div class="text-caption text-grey-7">{{ response.validationStatus }}</div>
         </div>
-        <q-chip color="positive" text-color="white" icon="verified">
-          Validated
+        <q-chip :color="chipColor" text-color="white" :icon="chipIcon">
+          {{ chipLabel }}
         </q-chip>
       </div>
 
@@ -50,6 +50,9 @@ const coordinatesLabel = computed(() => {
 
   return `${props.response.latitude.toFixed(6)}, ${props.response.longitude.toFixed(6)}`;
 });
+const chipColor = computed(() => (props.response.validationStatus === 'ValidationUnavailable' ? 'warning' : 'positive'));
+const chipIcon = computed(() => (props.response.validationStatus === 'ValidationUnavailable' ? 'warning' : 'verified'));
+const chipLabel = computed(() => (props.response.validationStatus === 'ValidationUnavailable' ? 'Accepted' : 'Validated'));
 </script>
 
 <style scoped>

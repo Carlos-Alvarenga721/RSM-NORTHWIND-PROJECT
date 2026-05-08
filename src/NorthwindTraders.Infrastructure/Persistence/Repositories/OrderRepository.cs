@@ -181,6 +181,7 @@ public sealed class OrderRepository(NorthwindDbContext dbContext) : IOrderReposi
             order.ShipViaNavigation?.CompanyName,
             freight,
             order.ShipCity,
+            order.ShipRegion,
             order.ShipCountry,
             order.OrderDetails.Count,
             order.OrderDetails.Sum(CalculateLineTotal) + freight);

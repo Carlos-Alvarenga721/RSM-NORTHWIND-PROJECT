@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using NorthwindTraders.Application.DTOs.Orders;
 using NorthwindTraders.Application.UseCases.Orders.CreateOrder;
 using NorthwindTraders.Application.UseCases.Orders.DeleteOrder;
+using NorthwindTraders.Application.UseCases.Orders.GenerateOrderPdf;
 using NorthwindTraders.Application.UseCases.Orders.GetOrderById;
 using NorthwindTraders.Application.UseCases.Orders.GetOrders;
 using NorthwindTraders.Application.UseCases.Orders.UpdateOrder;
@@ -15,7 +16,8 @@ public sealed class OrdersController(
     GetOrderByIdUseCase getOrderByIdUseCase,
     CreateOrderUseCase createOrderUseCase,
     UpdateOrderUseCase updateOrderUseCase,
-    DeleteOrderUseCase deleteOrderUseCase) : ControllerBase
+    DeleteOrderUseCase deleteOrderUseCase,
+    GenerateOrderPdfUseCase generateOrderPdfUseCase) : ControllerBase
 {
     [HttpGet]
     public async Task<IActionResult> GetAsync(CancellationToken cancellationToken)
@@ -60,5 +62,13 @@ public sealed class OrdersController(
         await deleteOrderUseCase.ExecuteAsync(orderId, cancellationToken);
 
         return NoContent();
+    }
+
+    [HttpGet("{orderId:int}/report/pdf")]
+    public async Task<IActionResult> GeneratePdfAsync(int orderId, CancellationToken cancellationToken)
+    {
+        var pdf = await generateOrderPdfUseCase.ExecuteAsync(orderId, cancellationToken);
+
+        return File(pdf, "application/pdf", $"northwind-order-{orderId}.pdf");
     }
 }

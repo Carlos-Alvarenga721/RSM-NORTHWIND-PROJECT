@@ -30,6 +30,7 @@
               min="0"
               step="0.01"
               label="Freight"
+              :rules="[(value) => Number(value || 0) >= 0 || 'Freight must be zero or greater']"
             />
           </div>
           <div class="col-12">
@@ -47,13 +48,20 @@
       v-model:region="draft.shipRegion"
       v-model:postal-code="draft.shipPostalCode"
       v-model:country="draft.shipCountry"
-      @validated="validatedAddress = $event"
+      @validated="handleAddressValidated"
     />
 
     <ValidatedAddressPanel
       v-if="validatedAddress"
       :response="validatedAddress"
     />
+
+    <section class="panel">
+      <div class="panel-section order-summary">
+        <span>Order total</span>
+        <strong>{{ formatCurrency(orderTotal) }}</strong>
+      </div>
+    </section>
 
     <div class="form-actions">
       <q-btn flat icon="close" label="Cancel" @click="emit('cancel')" />
@@ -63,7 +71,8 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
+import { Notify } from 'quasar';
 import CustomerSelector from './CustomerSelector.vue';
 import EmployeeSelector from './EmployeeSelector.vue';
 import ShipperSelector from './ShipperSelector.vue';
@@ -87,11 +96,29 @@ const emit = defineEmits<{
 const lookupStore = useLookupStore();
 const draft = ref<OrderFormModel>(cloneForm(props.modelValue));
 const validatedAddress = ref<AddressValidationResponse | null>(null);
+const validatedAddressSignature = ref<string | null>(null);
+
+const addressSignature = computed(() => getAddressSignature(draft.value));
+const isAddressValidated = computed(
+  () =>
+    Boolean(validatedAddress.value) &&
+    validatedAddressSignature.value === addressSignature.value &&
+    validatedAddress.value?.validationStatus !== 'Invalid',
+);
+const itemsTotal = computed(() =>
+  draft.value.details.reduce(
+    (sum, detail) => sum + detail.unitPrice * detail.quantity * (1 - detail.discount),
+    0,
+  ),
+);
+const orderTotal = computed(() => itemsTotal.value + Number(draft.value.freight || 0));
 
 watch(
   () => props.modelValue,
   (value) => {
     draft.value = cloneForm(value);
+    validatedAddress.value = null;
+    validatedAddressSignature.value = null;
   },
   { deep: true },
 );
@@ -101,6 +128,10 @@ onMounted(async () => {
 });
 
 function submit(): void {
+  if (!validateBeforeSubmit()) {
+    return;
+  }
+
   emit('submit', {
     customerId: draft.value.customerId || '',
     employeeId: draft.value.employeeId || 0,
@@ -117,6 +148,83 @@ function submit(): void {
     shipCountry: draft.value.shipCountry,
     details: draft.value.details,
   });
+}
+
+function validateBeforeSubmit(): boolean {
+  const invalidDetail = draft.value.details.find(
+    (detail) =>
+      detail.productId <= 0 ||
+      detail.quantity <= 0 ||
+      detail.unitPrice < 0 ||
+      detail.discount < 0 ||
+      detail.discount > 1,
+  );
+
+  if (!draft.value.customerId) {
+    Notify.create({ type: 'negative', message: 'Customer is required.' });
+    return false;
+  }
+
+  if (!draft.value.employeeId || draft.value.employeeId <= 0) {
+    Notify.create({ type: 'negative', message: 'Employee is required.' });
+    return false;
+  }
+
+  if (!draft.value.shipAddress || !draft.value.shipCity || !draft.value.shipCountry) {
+    Notify.create({ type: 'negative', message: 'Shipping address, city, and country are required.' });
+    return false;
+  }
+
+  if (Number(draft.value.freight || 0) < 0) {
+    Notify.create({ type: 'negative', message: 'Freight must be zero or greater.' });
+    return false;
+  }
+
+  if (!isAddressValidated.value) {
+    Notify.create({ type: 'negative', message: 'Validate the shipping address before saving.' });
+    return false;
+  }
+
+  if (draft.value.details.length === 0) {
+    Notify.create({ type: 'negative', message: 'Add at least one product line item.' });
+    return false;
+  }
+
+  if (invalidDetail) {
+    Notify.create({ type: 'negative', message: 'Each product must have a valid product, quantity, price, and discount.' });
+    return false;
+  }
+
+  if (new Set(draft.value.details.map((detail) => detail.productId)).size !== draft.value.details.length) {
+    Notify.create({ type: 'negative', message: 'An order cannot contain duplicate products.' });
+    return false;
+  }
+
+  return true;
+}
+
+function handleAddressValidated(response: AddressValidationResponse): void {
+  validatedAddress.value = response;
+  validatedAddressSignature.value = addressSignature.value;
+}
+
+function getAddressSignature(value: OrderFormModel): string {
+  return [
+    value.shipAddress,
+    value.shipCity,
+    value.shipRegion,
+    value.shipPostalCode,
+    value.shipCountry,
+  ]
+    .map((part) => (part || '').trim().toLowerCase())
+    .join('|');
+}
+
+function formatCurrency(value: number): string {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+  }).format(value);
 }
 
 function cloneForm(value: OrderFormModel): OrderFormModel {
@@ -137,5 +245,12 @@ function cloneForm(value: OrderFormModel): OrderFormModel {
   display: flex;
   justify-content: flex-end;
   gap: 8px;
+}
+
+.order-summary {
+  display: flex;
+  justify-content: flex-end;
+  gap: 16px;
+  font-size: 18px;
 }
 </style>

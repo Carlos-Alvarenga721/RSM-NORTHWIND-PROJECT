@@ -948,9 +948,20 @@ The following work has already been completed or prepared:
 47. Frontend pages were added for orders list, order create/edit form, order detail, and reports dashboard.
 48. Frontend reusable components were added for selectors, order form, line items, address validation, validated address display, map preview, and charts.
 49. Frontend typed API services and TypeScript API contracts were added for orders, lookups, address validation, reports, PDF, Excel, and error handling.
-50. Google Maps address validation backend has not been implemented yet, but the frontend service and UI are prepared for `POST /api/address-validation/validate`.
-51. Reports, PDF export, and Excel export backend endpoints have not been implemented yet, but the frontend services and UI are prepared for the expected routes.
-52. No EF Core migrations have been created. The project is still using Database First against the existing Northwind schema.
+50. Quasar dev server was confirmed running in the browser, and the Orders list loads live data from the backend.
+51. Frontend API base URL was corrected to `http://localhost:5083` for the current local backend.
+52. Backend CORS was updated to allow the Quasar development origins currently used locally:
+   - `http://localhost:9000`
+   - `http://127.0.0.1:9000`
+   - `http://192.168.56.100:9000`
+53. Lookup selector issues in the order form were fixed by removing the recursive form `v-model` watcher loop and replacing fragile dropdown binding with explicit menu/list selection.
+54. Create Order was manually tested through the frontend and now works.
+55. Backend order creation was hardened to save the order header first, then insert order details with the generated `OrderId`.
+56. The Orders create endpoint now returns `Created($"/api/orders/{order.OrderId}", order)` instead of `CreatedAtAction`, because `CreatedAtAction` was throwing `No route matches the supplied values`.
+57. Frontend error handling was improved to avoid showing raw Axios messages such as `Request failed with status code 500`.
+58. Google Maps address validation backend has not been implemented yet, but the frontend service and UI are prepared for `POST /api/address-validation/validate`.
+59. Reports, PDF export, and Excel export backend endpoints have not been implemented yet, but the frontend services and UI are prepared for the expected routes.
+60. No EF Core migrations have been created. The project is still using Database First against the existing Northwind schema.
 
 ### 17.3 Current Database and Configuration Decisions
 
@@ -984,7 +995,7 @@ Completed or considered completed:
 - Extra backend preparation: Application persistence abstractions, Infrastructure repositories, Unit of Work base, global exception handling middleware, and focused backend tests.
 
 Next task:
-- Prompt 9: Build and harden the Orders UI against the live backend after frontend dependencies can be installed.
+- Prompt 9: Build the Orders UI page and improve the order details for the Northwind Traders Order Management System.
 
 Do not start Prompt 9 UI hardening until explicitly requested.
 
@@ -1114,10 +1125,12 @@ Current API error behavior:
 
 Important implementation notes:
 - `OrderRepository.AddAsync` returns `CreatedOrderReference` so the Application layer can read the database-generated `OrderId` after `SaveChangesAsync` without referencing EF entities.
+- Order creation currently saves the `Orders` row first, calls `SaveChangesAsync`, then inserts `Order Details` with the generated `OrderId` and calls `SaveChangesAsync` again.
 - `OrderRepository.UpdateAsync` updates existing order detail rows in place when product IDs remain, removes missing details, and adds new details. This avoids EF Core tracking conflicts with the Northwind `Order Details` composite key.
 - `OrderRepository.DeleteAsync` removes order details before deleting the order.
 - Order totals are calculated as line item totals plus freight.
 - No database schema changes or migrations were added for Prompt 7.
+- `OrdersController.CreateAsync` returns `Created($"/api/orders/{order.OrderId}", order)`. Do not switch it back to `CreatedAtAction` unless route generation is also fixed and tested.
 
 Validation attempted after Prompt 7:
 
@@ -1222,11 +1235,20 @@ GET    /api/orders/{orderId}/report/pdf
 Frontend implementation notes:
 - Uses Pinia stores for orders, lookup data, and report data.
 - Uses Axios through a typed API client.
+- Local development API base URL is currently `http://localhost:5083`.
 - Uses Quasar Notify and Loading for user-facing feedback and long-running operations.
 - Uses Quasar Dialog for delete confirmation.
 - Uses Chart.js and vue-chartjs for dashboard charts.
 - Uses Google Maps embed URLs for map preview display.
 - Report, address validation, PDF, and Excel UI paths are prepared, but those backend endpoints are expected in later prompts.
+- The Customer, Employee, and Shipper selectors currently use explicit `QInput` + `QMenu` + `QItem` selection instead of `QSelect`.
+- `OrderForm.vue` intentionally does not emit `update:modelValue` on every internal draft change. A previous deep watcher caused `Maximum recursive updates exceeded` and prevented dropdown selection.
+- The Validate Address button currently calls a prepared frontend service, but the backend endpoint does not exist yet. It returns 404 until Prompt 10 or the address validation backend is implemented.
+- Manual smoke test completed:
+  - Orders page loads live backend data.
+  - Customer and Employee can be selected on Create Order.
+  - Product line items can be added.
+  - Save Order successfully creates an order through `POST /api/orders`.
 
 Frontend validation attempted after Prompt 8:
 
@@ -1235,9 +1257,11 @@ git diff --check -- client/northwind-traders-ui docs/northwind_traders_vs_code_a
 ```
 
 Build/run status after Prompt 8:
-- `node` is not available in the current WSL shell.
-- `npm` reports that WSL 1 is unsupported and cannot determine the Node.js install directory.
-- Because of this environment issue, dependencies were not installed and the Quasar dev server was not started from this shell.
+- In this assistant shell, `node` was not available and `npm` reported that WSL 1 is unsupported.
+- In the user's local environment, `npm install` and `npm run dev` were run successfully.
+- Quasar initially required `index.html` to use `<!-- quasar:entry-point -->` instead of `<div id="q-app"></div>`. This was fixed.
+- Quasar dev server runs on port `9000`.
+- The browser origin may be `http://192.168.56.100:9000`, so that origin is allowed in backend CORS.
 
 Before continuing frontend work, run from an environment with a working Node.js installation:
 

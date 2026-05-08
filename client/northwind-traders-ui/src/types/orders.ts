@@ -68,6 +68,7 @@ export interface OrderSummaryResponse {
   shipperName: string | null;
   freight: number;
   shipCity: string | null;
+  shipRegion: string | null;
   shipCountry: string | null;
   detailCount: number;
   orderTotal: number;

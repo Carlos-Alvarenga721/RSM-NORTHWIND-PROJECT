@@ -13,6 +13,7 @@ public sealed record OrderSummaryResponse(
     string? ShipperName,
     decimal Freight,
     string? ShipCity,
+    string? ShipRegion,
     string? ShipCountry,
     int DetailCount,
     decimal OrderTotal);

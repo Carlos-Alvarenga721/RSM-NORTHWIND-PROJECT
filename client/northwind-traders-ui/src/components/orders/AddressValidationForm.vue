@@ -88,6 +88,11 @@ const emit = defineEmits<{
 const isValidating = ref(false);
 
 async function validateAddress(): Promise<void> {
+  if (!props.address || !props.city || !props.country) {
+    Notify.create({ type: 'negative', message: 'Enter shipping address, city, and country before validation.' });
+    return;
+  }
+
   isValidating.value = true;
   try {
     const response = await validateShippingAddress({
@@ -98,7 +103,12 @@ async function validateAddress(): Promise<void> {
       country: props.country,
     });
     emit('validated', response);
-    Notify.create({ type: 'positive', message: 'Shipping address validated.' });
+    Notify.create({
+      type: response.validationStatus === 'ValidationUnavailable' ? 'warning' : 'positive',
+      message: response.validationStatus === 'ValidationUnavailable'
+        ? 'Address accepted. Google validation is not configured.'
+        : 'Shipping address validated.',
+    });
   } catch (error) {
     notifyApiError(error);
   } finally {

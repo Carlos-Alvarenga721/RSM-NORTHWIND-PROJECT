@@ -18,6 +18,18 @@
           <q-list dense>
             <q-item>
               <q-item-section>
+                <q-item-label caption>Order ID</q-item-label>
+                <q-item-label>{{ order.orderId }}</q-item-label>
+              </q-item-section>
+            </q-item>
+            <q-item>
+              <q-item-section>
+                <q-item-label caption>Customer</q-item-label>
+                <q-item-label>{{ order.customerName || order.customerId }}</q-item-label>
+              </q-item-section>
+            </q-item>
+            <q-item>
+              <q-item-section>
                 <q-item-label caption>Employee</q-item-label>
                 <q-item-label>{{ order.employeeName || 'Not assigned' }}</q-item-label>
               </q-item-section>
@@ -30,8 +42,20 @@
             </q-item>
             <q-item>
               <q-item-section>
-                <q-item-label caption>Dates</q-item-label>
-                <q-item-label>{{ formatDate(order.orderDate) }} / {{ formatDate(order.requiredDate) }} / {{ formatDate(order.shippedDate) }}</q-item-label>
+                <q-item-label caption>Order Date</q-item-label>
+                <q-item-label>{{ formatDate(order.orderDate) }}</q-item-label>
+              </q-item-section>
+            </q-item>
+            <q-item>
+              <q-item-section>
+                <q-item-label caption>Ship Country</q-item-label>
+                <q-item-label>{{ order.shipCountry || 'Not set' }}</q-item-label>
+              </q-item-section>
+            </q-item>
+            <q-item>
+              <q-item-section>
+                <q-item-label caption>Freight</q-item-label>
+                <q-item-label>{{ formatCurrency(order.freight) }}</q-item-label>
               </q-item-section>
             </q-item>
           </q-list>
@@ -44,7 +68,34 @@
           <div>{{ order.shipName || order.customerName }}</div>
           <div>{{ order.shipAddress }}</div>
           <div>{{ addressLine }}</div>
-          <GoogleMapPreview :latitude="null" :longitude="null" :address="fullAddress" />
+          <div v-if="validatedAddress" class="validated-address-inline q-mt-md">
+            <q-list dense>
+              <q-item>
+                <q-item-section>
+                  <q-item-label caption>Validated Address</q-item-label>
+                  <q-item-label>{{ validatedAddress.formattedAddress || fullAddress }}</q-item-label>
+                </q-item-section>
+              </q-item>
+              <q-item>
+                <q-item-section>
+                  <q-item-label caption>Coordinates</q-item-label>
+                  <q-item-label>{{ coordinatesLabel }}</q-item-label>
+                </q-item-section>
+              </q-item>
+            </q-list>
+            <GoogleMapPreview
+              :latitude="validatedAddress.latitude"
+              :longitude="validatedAddress.longitude"
+              :address="validatedAddress.formattedAddress || fullAddress"
+            />
+          </div>
+          <GoogleMapPreview
+            v-else
+            class="q-mt-md"
+            :latitude="null"
+            :longitude="null"
+            :address="fullAddress"
+          />
         </div>
       </section>
 
@@ -78,21 +129,24 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { Loading, Notify } from 'quasar';
 import type { QTableColumn } from 'quasar';
 import GoogleMapPreview from 'components/maps/GoogleMapPreview.vue';
 import { downloadOrderPdf } from 'src/services/orderService';
+import { validateShippingAddress } from 'src/services/addressValidationService';
 import { notifyApiError } from 'src/services/errorHandler';
 import { downloadFile } from 'src/utils/downloadFile';
 import { useOrderStore } from 'src/stores/orderStore';
+import type { AddressValidationResponse } from 'src/types/addressValidation';
 import type { OrderDetailResponse } from 'src/types/orders';
 
 const route = useRoute();
 const router = useRouter();
 const orderStore = useOrderStore();
 const orderId = Number(route.params.orderId);
+const validatedAddress = ref<AddressValidationResponse | null>(null);
 
 const order = computed(() => orderStore.selectedOrder);
 const addressLine = computed(() =>
@@ -103,6 +157,16 @@ const addressLine = computed(() =>
 const fullAddress = computed(() =>
   [order.value?.shipAddress, addressLine.value].filter(Boolean).join(', '),
 );
+const coordinatesLabel = computed(() => {
+  const latitude = validatedAddress.value?.latitude;
+  const longitude = validatedAddress.value?.longitude;
+
+  if (latitude === null || latitude === undefined || longitude === null || longitude === undefined) {
+    return 'Coordinates unavailable';
+  }
+
+  return `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+});
 
 const columns: QTableColumn<OrderDetailResponse>[] = [
   { name: 'productName', label: 'Product', field: 'productName', align: 'left' },
@@ -119,8 +183,15 @@ onMounted(async () => {
   } catch (error) {
     notifyApiError(error);
     await router.push({ name: 'orders' });
+    return;
   } finally {
     Loading.hide();
+  }
+
+  try {
+    await validateOrderAddress();
+  } catch (error) {
+    notifyApiError(error);
   }
 });
 
@@ -135,6 +206,20 @@ async function generatePdf(): Promise<void> {
   } finally {
     Loading.hide();
   }
+}
+
+async function validateOrderAddress(): Promise<void> {
+  if (!order.value?.shipAddress || !order.value.shipCity || !order.value.shipCountry) {
+    return;
+  }
+
+  validatedAddress.value = await validateShippingAddress({
+    addressLine: order.value.shipAddress,
+    city: order.value.shipCity,
+    region: order.value.shipRegion,
+    postalCode: order.value.shipPostalCode,
+    country: order.value.shipCountry,
+  });
 }
 
 function formatDate(value: string | null): string {
@@ -161,6 +246,11 @@ function formatCurrency(value: number): string {
   display: flex;
   justify-content: flex-end;
   gap: 24px;
+}
+
+.validated-address-inline {
+  display: grid;
+  gap: 12px;
 }
 
 @media (max-width: 900px) {

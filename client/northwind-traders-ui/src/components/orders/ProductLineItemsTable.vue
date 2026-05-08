@@ -30,6 +30,7 @@
               outlined
               dense
               label="Product"
+              :rules="[(value) => Number(value) > 0 || 'Product is required']"
               @update:model-value="updateProduct(scope.rowIndex, Number($event))"
             />
           </q-td>
@@ -44,6 +45,7 @@
               type="number"
               min="0"
               step="0.01"
+              :rules="[(value) => Number(value) >= 0 || 'Price must be zero or greater']"
               @update:model-value="updateDetail(scope.rowIndex, 'unitPrice', Number($event || 0))"
             />
           </q-td>
@@ -57,6 +59,7 @@
               dense
               type="number"
               min="1"
+              :rules="[(value) => Number(value) > 0 || 'Quantity must be greater than zero']"
               @update:model-value="updateDetail(scope.rowIndex, 'quantity', Number($event || 1))"
             />
           </q-td>
@@ -72,6 +75,7 @@
               min="0"
               max="1"
               step="0.01"
+              :rules="[(value) => (Number(value) >= 0 && Number(value) <= 1) || 'Discount must be between 0 and 1']"
               @update:model-value="updateDetail(scope.rowIndex, 'discount', Number($event || 0))"
             />
           </q-td>
