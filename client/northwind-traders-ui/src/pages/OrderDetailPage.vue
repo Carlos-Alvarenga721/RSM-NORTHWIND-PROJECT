@@ -129,26 +129,24 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { Loading, Notify } from 'quasar';
 import type { QTableColumn } from 'quasar';
 import GoogleMapPreview from 'components/maps/GoogleMapPreview.vue';
 import { downloadOrderPdf } from 'src/services/orderService';
-import { validateShippingAddress } from 'src/services/addressValidationService';
 import { notifyApiError } from 'src/services/errorHandler';
 import { downloadFile } from 'src/utils/downloadFile';
 import { useOrderStore } from 'src/stores/orderStore';
-import type { AddressValidationResponse } from 'src/types/addressValidation';
 import type { OrderDetailResponse } from 'src/types/orders';
 
 const route = useRoute();
 const router = useRouter();
 const orderStore = useOrderStore();
 const orderId = Number(route.params.orderId);
-const validatedAddress = ref<AddressValidationResponse | null>(null);
 
 const order = computed(() => orderStore.selectedOrder);
+const validatedAddress = computed(() => order.value?.shippingValidation ?? null);
 const addressLine = computed(() =>
   [order.value?.shipCity, order.value?.shipRegion, order.value?.shipPostalCode, order.value?.shipCountry]
     .filter(Boolean)
@@ -188,11 +186,6 @@ onMounted(async () => {
     Loading.hide();
   }
 
-  try {
-    await validateOrderAddress();
-  } catch (error) {
-    notifyApiError(error);
-  }
 });
 
 async function generatePdf(): Promise<void> {
@@ -206,20 +199,6 @@ async function generatePdf(): Promise<void> {
   } finally {
     Loading.hide();
   }
-}
-
-async function validateOrderAddress(): Promise<void> {
-  if (!order.value?.shipAddress || !order.value.shipCity || !order.value.shipCountry) {
-    return;
-  }
-
-  validatedAddress.value = await validateShippingAddress({
-    addressLine: order.value.shipAddress,
-    city: order.value.shipCity,
-    region: order.value.shipRegion,
-    postalCode: order.value.shipPostalCode,
-    country: order.value.shipCountry,
-  });
 }
 
 function formatDate(value: string | null): string {

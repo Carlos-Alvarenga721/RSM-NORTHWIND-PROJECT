@@ -30,6 +30,7 @@ public sealed class OrderRepository(NorthwindDbContext dbContext) : IOrderReposi
             .Include(order => order.Customer)
             .Include(order => order.Employee)
             .Include(order => order.ShipViaNavigation)
+            .Include(order => order.ShippingValidation)
             .Include(order => order.OrderDetails)
                 .ThenInclude(detail => detail.Product)
             .FirstOrDefaultAsync(order => order.OrderId == orderId, cancellationToken);
@@ -41,6 +42,7 @@ public sealed class OrderRepository(NorthwindDbContext dbContext) : IOrderReposi
     {
         var order = new Order();
         ApplyOrderValues(order, request);
+        order.ShippingValidation = MapShippingValidation(request.ShippingValidation);
 
         await dbContext.Orders.AddAsync(order, cancellationToken);
 
@@ -62,10 +64,12 @@ public sealed class OrderRepository(NorthwindDbContext dbContext) : IOrderReposi
     public async Task UpdateAsync(int orderId, UpdateOrderRequest request, CancellationToken cancellationToken = default)
     {
         var order = await dbContext.Orders
+            .Include(order => order.ShippingValidation)
             .Include(order => order.OrderDetails)
             .FirstAsync(order => order.OrderId == orderId, cancellationToken);
 
         ApplyOrderValues(order, request);
+        ApplyShippingValidation(order, request.ShippingValidation);
         var requestedProductIds = request.Details
             .Select(detail => detail.ProductId)
             .ToHashSet();
@@ -219,8 +223,75 @@ public sealed class OrderRepository(NorthwindDbContext dbContext) : IOrderReposi
             order.ShipRegion,
             order.ShipPostalCode,
             order.ShipCountry,
+            MapShippingValidation(order.ShippingValidation),
             details.Sum(detail => detail.LineTotal) + freight,
             details);
+    }
+
+    private static void ApplyShippingValidation(
+        Order order,
+        OrderShippingValidationRequest? validationRequest)
+    {
+        if (validationRequest is null)
+        {
+            order.ShippingValidation = null;
+            return;
+        }
+
+        if (order.ShippingValidation is null)
+        {
+            order.ShippingValidation = MapShippingValidation(validationRequest);
+            return;
+        }
+
+        UpdateShippingValidation(order.ShippingValidation, validationRequest);
+    }
+
+    private static OrderShippingValidation? MapShippingValidation(OrderShippingValidationRequest? validationRequest)
+    {
+        if (validationRequest is null)
+        {
+            return null;
+        }
+
+        var validation = new OrderShippingValidation();
+        UpdateShippingValidation(validation, validationRequest);
+
+        return validation;
+    }
+
+    private static void UpdateShippingValidation(
+        OrderShippingValidation validation,
+        OrderShippingValidationRequest validationRequest)
+    {
+        validation.OriginalAddress = validationRequest.OriginalAddress;
+        validation.FormattedAddress = validationRequest.FormattedAddress;
+        validation.Latitude = validationRequest.Latitude;
+        validation.Longitude = validationRequest.Longitude;
+        validation.ValidationStatus = validationRequest.ValidationStatus;
+        validation.GooglePlaceId = validationRequest.GooglePlaceId;
+        validation.ValidationMessage = validationRequest.ValidationMessage;
+        validation.ValidationGranularity = validationRequest.ValidationGranularity;
+        validation.GeocodeGranularity = validationRequest.GeocodeGranularity;
+        validation.ValidatedAtUtc = DateTime.UtcNow;
+    }
+
+    private static OrderShippingValidationResponse? MapShippingValidation(
+        OrderShippingValidation? validation)
+    {
+        return validation is null
+            ? null
+            : new OrderShippingValidationResponse(
+                validation.OriginalAddress,
+                validation.FormattedAddress,
+                validation.Latitude,
+                validation.Longitude,
+                validation.ValidationStatus,
+                validation.GooglePlaceId,
+                validation.ValidationMessage,
+                validation.ValidationGranularity,
+                validation.GeocodeGranularity,
+                validation.ValidatedAtUtc);
     }
 
     private static string? GetEmployeeName(Employee? employee)

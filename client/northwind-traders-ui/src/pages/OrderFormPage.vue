@@ -44,6 +44,7 @@ const form = ref<OrderFormModel>({
   shipRegion: null,
   shipPostalCode: null,
   shipCountry: null,
+  shippingValidation: null,
   details: [],
 });
 
@@ -104,6 +105,7 @@ function mapOrderToForm(order: OrderResponse): OrderFormModel {
     shipRegion: order.shipRegion,
     shipPostalCode: order.shipPostalCode,
     shipCountry: order.shipCountry,
+    shippingValidation: order.shippingValidation,
     details: order.details.map((detail) => ({
       productId: detail.productId,
       unitPrice: detail.unitPrice,

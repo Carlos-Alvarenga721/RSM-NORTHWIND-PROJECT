@@ -162,6 +162,78 @@ public sealed class GoogleMapsAddressValidationServiceTests
     }
 
     [Fact]
+    public async Task ValidateAsync_ShouldReturnNeedsReviewWithCoordinatesWhenGeocodingFallbackFindsPreciseCountryMatch()
+    {
+        var handler = new SequenceHttpMessageHandler(
+            new HttpResponseMessage(HttpStatusCode.BadRequest)
+            {
+                Content = new StringContent(
+                    """
+                    {
+                      "error": {
+                        "code": 400,
+                        "message": "Unsupported country."
+                      }
+                    }
+                    """,
+                    Encoding.UTF8,
+                    "application/json")
+            },
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    """
+                    {
+                      "status": "OK",
+                      "results": [
+                        {
+                          "formatted_address": "Calle El Mirador y 87 Avenida Norte, San Salvador, El Salvador",
+                          "place_id": "fallback-place",
+                          "address_components": [
+                            {
+                              "long_name": "El Salvador",
+                              "short_name": "SV",
+                              "types": ["country", "political"]
+                            }
+                          ],
+                          "geometry": {
+                            "location": {
+                              "lat": 13.708,
+                              "lng": -89.242
+                            },
+                            "location_type": "ROOFTOP"
+                          }
+                        }
+                      ]
+                    }
+                    """,
+                    Encoding.UTF8,
+                    "application/json")
+            });
+        var service = CreateService(
+            "{}",
+            handler: handler);
+
+        var result = await service.ValidateAsync(new AddressValidationRequest(
+            "Calle El Mirador y 87 Avenida Norte",
+            "San Salvador",
+            "San Salvador",
+            "1101",
+            "SV"));
+
+        result.ValidationStatus.Should().Be("NeedsReview");
+        result.Latitude.Should().Be(13.708);
+        result.Longitude.Should().Be(-89.242);
+        result.GooglePlaceId.Should().Be("fallback-place");
+        result.ValidationGranularity.Should().Be("GEOCODE_FALLBACK");
+        result.GeocodeGranularity.Should().Be("ROOFTOP");
+        result.ValidationMessage.Should().Contain("postal address validation is not available");
+        handler.RequestUris.Should().HaveCount(2);
+        handler.RequestUris[1].AbsolutePath.Should().Be("/maps/api/geocode/json");
+        handler.RequestUris[1].Query.Should().Contain("components=country%3ASV");
+    }
+
+    [Fact]
     public async Task ValidateAsync_ShouldReturnValidationUnavailableWhenGoogleRejectsApiKey()
     {
         var service = CreateService(
@@ -196,7 +268,8 @@ public sealed class GoogleMapsAddressValidationServiceTests
         var options = Options.Create(new GoogleMapsOptions
         {
             ApiKey = configuration["GoogleMaps:ApiKey"],
-            AddressValidationBaseUrl = GoogleMapsOptions.DefaultAddressValidationBaseUrl
+            AddressValidationBaseUrl = GoogleMapsOptions.DefaultAddressValidationBaseUrl,
+            GeocodingBaseUrl = GoogleMapsOptions.DefaultGeocodingBaseUrl
         });
         var httpClient = new HttpClient(handler ?? new StubHttpMessageHandler(responseJson, statusCode))
         {
@@ -253,6 +326,22 @@ public sealed class GoogleMapsAddressValidationServiceTests
             {
                 Content = new StringContent(responseJson, Encoding.UTF8, "application/json")
             };
+        }
+    }
+
+    private sealed class SequenceHttpMessageHandler(params HttpResponseMessage[] responses) : HttpMessageHandler
+    {
+        private readonly Queue<HttpResponseMessage> responses = new(responses);
+
+        public List<Uri> RequestUris { get; } = [];
+
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            RequestUris.Add(request.RequestUri!);
+
+            return Task.FromResult(responses.Dequeue());
         }
     }
 }

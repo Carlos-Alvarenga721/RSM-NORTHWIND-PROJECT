@@ -144,7 +144,7 @@ watch(
   () => props.modelValue,
   (value) => {
     draft.value = cloneForm(value);
-    clearValidationState();
+    setValidationState(value.shippingValidation);
   },
   { deep: true },
 );
@@ -156,6 +156,7 @@ watch(addressSignature, (value) => {
 });
 
 onMounted(async () => {
+  setValidationState(draft.value.shippingValidation);
   await lookupStore.loadLookups();
 });
 
@@ -180,6 +181,7 @@ function submit(): void {
     shipRegion: draft.value.shipRegion,
     shipPostalCode: draft.value.shipPostalCode,
     shipCountry: draft.value.shipCountry,
+    shippingValidation: isAddressAccepted.value ? validatedAddress.value : null,
     details: draft.value.details,
   });
 }
@@ -257,10 +259,7 @@ function validateBeforeSubmit(): boolean {
 }
 
 function handleAddressValidated(response: AddressValidationResponse): void {
-  validatedAddress.value = response;
-  validatedAddressSignature.value = addressSignature.value;
-  hasReviewedAddress.value = response.validationStatus === 'Validated' ||
-    response.validationStatus === 'ValidationUnavailable';
+  setValidationState(response);
   if (response.validationStatus === 'NeedsReview') {
     hasReviewedAddress.value = false;
   }
@@ -300,6 +299,7 @@ function formatCurrency(value: number): string {
 function cloneForm(value: OrderFormModel): OrderFormModel {
   return {
     ...value,
+    shippingValidation: value.shippingValidation ? { ...value.shippingValidation } : null,
     details: value.details.map((detail) => ({ ...detail })),
   };
 }
@@ -308,6 +308,18 @@ function clearValidationState(): void {
   validatedAddress.value = null;
   validatedAddressSignature.value = null;
   hasReviewedAddress.value = false;
+}
+
+function setValidationState(response: AddressValidationResponse | null): void {
+  if (!response) {
+    clearValidationState();
+    return;
+  }
+
+  validatedAddress.value = response;
+  validatedAddressSignature.value = addressSignature.value;
+  hasReviewedAddress.value = response.validationStatus === 'Validated' ||
+    response.validationStatus === 'ValidationUnavailable';
 }
 </script>
 

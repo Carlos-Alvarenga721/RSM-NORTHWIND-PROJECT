@@ -67,6 +67,7 @@ public sealed class CreateOrderUseCaseTests
             null,
             "51100",
             "France",
+            null,
             new List<OrderDetailRequest>
             {
                 new(11, 14m, 1, 0)
@@ -93,6 +94,7 @@ public sealed class CreateOrderUseCaseTests
             null,
             "51100",
             "France",
+            null,
             47.38m,
             new List<OrderDetailResponse>
             {

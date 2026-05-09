@@ -49,6 +49,10 @@ public sealed class CreateOrderRequestValidator : AbstractValidator<CreateOrderR
 
         RuleForEach(request => request.Details)
             .SetValidator(new OrderDetailRequestValidator(productRepository));
+
+        RuleFor(request => request.ShippingValidation!)
+            .SetValidator(new OrderShippingValidationRequestValidator())
+            .When(request => request.ShippingValidation is not null);
     }
 }
 
@@ -97,6 +101,43 @@ public sealed class UpdateOrderRequestValidator : AbstractValidator<UpdateOrderR
 
         RuleForEach(request => request.Details)
             .SetValidator(new OrderDetailRequestValidator(productRepository));
+
+        RuleFor(request => request.ShippingValidation!)
+            .SetValidator(new OrderShippingValidationRequestValidator())
+            .When(request => request.ShippingValidation is not null);
+    }
+}
+
+public sealed class OrderShippingValidationRequestValidator : AbstractValidator<OrderShippingValidationRequest>
+{
+    private static readonly string[] AllowedStatuses =
+    [
+        "Validated",
+        "NeedsReview",
+        "ValidationUnavailable"
+    ];
+
+    public OrderShippingValidationRequestValidator()
+    {
+        RuleFor(validation => validation.ValidationStatus)
+            .NotEmpty()
+            .Must(status => AllowedStatuses.Contains(status))
+            .WithMessage("Shipping validation status must be Validated, NeedsReview, or ValidationUnavailable.");
+
+        RuleFor(validation => validation.OriginalAddress).MaximumLength(300);
+        RuleFor(validation => validation.FormattedAddress).MaximumLength(300);
+        RuleFor(validation => validation.GooglePlaceId).MaximumLength(200);
+        RuleFor(validation => validation.ValidationMessage).MaximumLength(500);
+        RuleFor(validation => validation.ValidationGranularity).MaximumLength(50);
+        RuleFor(validation => validation.GeocodeGranularity).MaximumLength(50);
+
+        RuleFor(validation => validation.Latitude)
+            .InclusiveBetween(-90, 90)
+            .When(validation => validation.Latitude.HasValue);
+
+        RuleFor(validation => validation.Longitude)
+            .InclusiveBetween(-180, 180)
+            .When(validation => validation.Longitude.HasValue);
     }
 }
 

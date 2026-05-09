@@ -121,6 +121,21 @@ public sealed class GoogleMapsAddressValidationService(
                 (int)response.StatusCode,
                 response.ReasonPhrase);
 
+            if (response.StatusCode == HttpStatusCode.BadRequest)
+            {
+                var geocodingFallback = await TryCreateGeocodingFallbackAsync(
+                    request,
+                    originalAddress,
+                    apiKey,
+                    googleMapsOptions.GeocodingBaseUrl,
+                    cancellationToken);
+
+                if (geocodingFallback is not null)
+                {
+                    return geocodingFallback;
+                }
+            }
+
             return CreateGoogleFailureResponse(originalAddress, response.StatusCode);
         }
 
@@ -220,6 +235,177 @@ public sealed class GoogleMapsAddressValidationService(
         }
 
         return country.Trim().ToUpperInvariant();
+    }
+
+    private async Task<AddressValidationResponse?> TryCreateGeocodingFallbackAsync(
+        AddressValidationRequest request,
+        string originalAddress,
+        string apiKey,
+        string geocodingBaseUrl,
+        CancellationToken cancellationToken)
+    {
+        var countryCode = NormalizeRegionCode(request.Country);
+        var requestUri = BuildGeocodingRequestUri(
+            geocodingBaseUrl,
+            originalAddress,
+            countryCode,
+            apiKey);
+
+        HttpResponseMessage response;
+
+        try
+        {
+            response = await httpClient.GetAsync(requestUri, cancellationToken);
+        }
+        catch (HttpRequestException exception)
+        {
+            logger.LogWarning(
+                "Google geocoding fallback request failed: {ErrorType}.",
+                exception.GetType().Name);
+
+            return null;
+        }
+        catch (TaskCanceledException exception) when (!cancellationToken.IsCancellationRequested)
+        {
+            logger.LogWarning(
+                "Google geocoding fallback request timed out: {ErrorType}.",
+                exception.GetType().Name);
+
+            return null;
+        }
+
+        if (!response.IsSuccessStatusCode)
+        {
+            logger.LogWarning(
+                "Google geocoding fallback returned status {StatusCode} ({ReasonPhrase}).",
+                (int)response.StatusCode,
+                response.ReasonPhrase);
+
+            return null;
+        }
+
+        JsonNode? document;
+
+        try
+        {
+            document = await response.Content.ReadFromJsonAsync<JsonNode>(cancellationToken);
+        }
+        catch (Exception exception) when (exception is JsonException or NotSupportedException)
+        {
+            logger.LogWarning(
+                "Google geocoding fallback response could not be parsed: {ErrorType}.",
+                exception.GetType().Name);
+
+            return null;
+        }
+
+        return CreateGeocodingFallbackResponse(document, originalAddress, countryCode);
+    }
+
+    private static Uri BuildGeocodingRequestUri(
+        string geocodingBaseUrl,
+        string originalAddress,
+        string? countryCode,
+        string apiKey)
+    {
+        var normalizedBaseUrl = string.IsNullOrWhiteSpace(geocodingBaseUrl)
+            ? GoogleMapsOptions.DefaultGeocodingBaseUrl
+            : geocodingBaseUrl.Trim();
+        normalizedBaseUrl = normalizedBaseUrl.EndsWith('/')
+            ? normalizedBaseUrl
+            : string.Concat(normalizedBaseUrl, "/");
+
+        var query = string.Concat(
+            "address=",
+            Uri.EscapeDataString(originalAddress),
+            string.IsNullOrWhiteSpace(countryCode)
+                ? string.Empty
+                : string.Concat("&components=", Uri.EscapeDataString($"country:{countryCode}")),
+            "&key=",
+            Uri.EscapeDataString(apiKey));
+
+        return new Uri(
+            new Uri(normalizedBaseUrl, UriKind.Absolute),
+            $"maps/api/geocode/json?{query}");
+    }
+
+    private static AddressValidationResponse? CreateGeocodingFallbackResponse(
+        JsonNode? document,
+        string originalAddress,
+        string? expectedCountryCode)
+    {
+        if (document is not JsonObject root ||
+            !string.Equals(GetString(root["status"]), "OK", StringComparison.OrdinalIgnoreCase) ||
+            root["results"] is not JsonArray results)
+        {
+            return null;
+        }
+
+        var result = results
+            .OfType<JsonObject>()
+            .FirstOrDefault(candidate => IsCountryMatch(candidate, expectedCountryCode) && HasPreciseGeocode(candidate));
+
+        if (result is null)
+        {
+            return null;
+        }
+
+        var location = result["geometry"]?["location"] as JsonObject;
+        var locationType = GetString(result["geometry"]?["location_type"]);
+        var latitude = GetDouble(location?["lat"]);
+        var longitude = GetDouble(location?["lng"]);
+
+        if (!latitude.HasValue || !longitude.HasValue)
+        {
+            return null;
+        }
+
+        return new AddressValidationResponse(
+            originalAddress,
+            GetString(result["formatted_address"]) ?? originalAddress,
+            latitude,
+            longitude,
+            NeedsReviewStatus,
+            GetString(result["place_id"]),
+            "Google Maps found this location, but postal address validation is not available for this country or address. Review the coordinates before saving.",
+            "GEOCODE_FALLBACK",
+            locationType);
+    }
+
+    private static bool IsCountryMatch(JsonObject result, string? expectedCountryCode)
+    {
+        if (string.IsNullOrWhiteSpace(expectedCountryCode))
+        {
+            return true;
+        }
+
+        if (result["address_components"] is not JsonArray components)
+        {
+            return false;
+        }
+
+        return components
+            .OfType<JsonObject>()
+            .Any(component =>
+                HasAddressComponentType(component, "country") &&
+                string.Equals(GetString(component["short_name"]), expectedCountryCode, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static bool HasAddressComponentType(JsonObject component, string type)
+    {
+        return component["types"] is JsonArray types &&
+            types
+                .OfType<JsonValue>()
+                .Any(value => value.TryGetValue<string>(out var componentType) &&
+                    string.Equals(componentType, type, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static bool HasPreciseGeocode(JsonObject result)
+    {
+        var locationType = GetString(result["geometry"]?["location_type"]);
+
+        return string.Equals(locationType, "ROOFTOP", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(locationType, "RANGE_INTERPOLATED", StringComparison.OrdinalIgnoreCase);
     }
 
     private static string? GetString(JsonNode? node)

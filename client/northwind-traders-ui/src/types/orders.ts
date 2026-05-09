@@ -1,8 +1,16 @@
+import type { AddressValidationResponse } from './addressValidation';
+
 export interface OrderDetailRequest {
   productId: number;
   unitPrice: number;
   quantity: number;
   discount: number;
+}
+
+export type OrderShippingValidationRequest = AddressValidationResponse;
+
+export interface OrderShippingValidationResponse extends AddressValidationResponse {
+  validatedAtUtc: string;
 }
 
 export interface CreateOrderRequest {
@@ -19,6 +27,7 @@ export interface CreateOrderRequest {
   shipRegion: string | null;
   shipPostalCode: string | null;
   shipCountry: string | null;
+  shippingValidation: OrderShippingValidationRequest | null;
   details: OrderDetailRequest[];
 }
 
@@ -51,6 +60,7 @@ export interface OrderResponse {
   shipRegion: string | null;
   shipPostalCode: string | null;
   shipCountry: string | null;
+  shippingValidation: OrderShippingValidationResponse | null;
   orderTotal: number;
   details: OrderDetailResponse[];
 }
@@ -89,5 +99,6 @@ export interface OrderFormModel {
   shipRegion: string | null;
   shipPostalCode: string | null;
   shipCountry: string | null;
+  shippingValidation: OrderShippingValidationResponse | null;
   details: OrderDetailRequest[];
 }

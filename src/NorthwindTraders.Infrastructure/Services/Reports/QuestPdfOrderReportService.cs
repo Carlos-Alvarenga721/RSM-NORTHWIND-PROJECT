@@ -81,7 +81,8 @@ public sealed class QuestPdfOrderReportService : IOrderPdfReportService
                 AddInfoRow(table, "Customer", order.CustomerName ?? order.CustomerId);
                 AddInfoRow(table, "Employee", order.EmployeeName ?? "Not assigned");
                 AddInfoRow(table, "Order Date", FormatDate(order.OrderDate));
-                AddInfoRow(table, "Ship Country", order.ShipCountry ?? "Not set");
+                AddInfoRow(table, "Required Date", FormatDate(order.RequiredDate));
+                AddInfoRow(table, "Shipped Date", FormatDate(order.ShippedDate));
                 AddInfoRow(table, "Shipper", order.ShipperName ?? "Not assigned");
                 AddInfoRow(table, "Freight", FormatCurrency(order.Freight));
             });
@@ -104,6 +105,9 @@ public sealed class QuestPdfOrderReportService : IOrderPdfReportService
         {
             column.Item().Text("Shipping Address").FontSize(13).Bold();
             column.Item().PaddingTop(6).Text(string.IsNullOrWhiteSpace(address) ? "Not set" : address);
+            column.Item().PaddingTop(6).Text($"Validated Address: {order.ShippingValidation?.FormattedAddress ?? "Not available"}");
+            column.Item().Text($"Validation Status: {order.ShippingValidation?.ValidationStatus ?? "Not available"}");
+            column.Item().Text($"Coordinates: {FormatCoordinates(order.ShippingValidation)}");
         });
     }
 
@@ -174,5 +178,14 @@ public sealed class QuestPdfOrderReportService : IOrderPdfReportService
     private static string FormatCurrency(decimal value)
     {
         return value.ToString("C", CultureInfo.GetCultureInfo("en-US"));
+    }
+
+    private static string FormatCoordinates(OrderShippingValidationResponse? validation)
+    {
+        return validation?.Latitude is null || validation.Longitude is null
+            ? "Not available"
+            : string.Create(
+                CultureInfo.InvariantCulture,
+                $"{validation.Latitude.Value:F6}, {validation.Longitude.Value:F6}");
     }
 }

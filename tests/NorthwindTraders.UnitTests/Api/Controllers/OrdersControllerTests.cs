@@ -93,6 +93,7 @@ public sealed class OrdersControllerTests
             null,
             "51100",
             "France",
+            null,
             47.38m,
             new List<OrderDetailResponse>
             {

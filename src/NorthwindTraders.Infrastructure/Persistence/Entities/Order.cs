@@ -39,5 +39,7 @@ public partial class Order
 
     public virtual ICollection<OrderDetail> OrderDetails { get; set; } = new List<OrderDetail>();
 
+    public virtual OrderShippingValidation? ShippingValidation { get; set; }
+
     public virtual Shipper? ShipViaNavigation { get; set; }
 }

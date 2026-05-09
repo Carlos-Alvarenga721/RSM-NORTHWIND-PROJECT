@@ -34,6 +34,8 @@ public partial class NorthwindDbContext : Microsoft.EntityFrameworkCore.DbContex
 
     public virtual DbSet<OrderDetail> OrderDetails { get; set; }
 
+    public virtual DbSet<OrderShippingValidation> OrderShippingValidations { get; set; }
+
     public virtual DbSet<OrderDetailsExtended> OrderDetailsExtendeds { get; set; }
 
     public virtual DbSet<OrderSubtotal> OrderSubtotals { get; set; }
@@ -324,6 +326,26 @@ public partial class NorthwindDbContext : Microsoft.EntityFrameworkCore.DbContex
             entity.HasOne(d => d.ShipViaNavigation).WithMany(p => p.Orders)
                 .HasForeignKey(d => d.ShipVia)
                 .HasConstraintName("FK_Orders_Shippers");
+        });
+
+        modelBuilder.Entity<OrderShippingValidation>(entity =>
+        {
+            entity.HasKey(e => e.OrderId);
+
+            entity.Property(e => e.OrderId).HasColumnName("OrderID");
+            entity.Property(e => e.OriginalAddress).HasMaxLength(300);
+            entity.Property(e => e.FormattedAddress).HasMaxLength(300);
+            entity.Property(e => e.ValidationStatus).HasMaxLength(40);
+            entity.Property(e => e.GooglePlaceId).HasMaxLength(200);
+            entity.Property(e => e.ValidationMessage).HasMaxLength(500);
+            entity.Property(e => e.ValidationGranularity).HasMaxLength(50);
+            entity.Property(e => e.GeocodeGranularity).HasMaxLength(50);
+            entity.Property(e => e.ValidatedAtUtc).HasColumnType("datetime2");
+
+            entity.HasOne(d => d.Order).WithOne(p => p.ShippingValidation)
+                .HasForeignKey<OrderShippingValidation>(d => d.OrderId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_OrderShippingValidations_Orders");
         });
 
         modelBuilder.Entity<OrderDetail>(entity =>

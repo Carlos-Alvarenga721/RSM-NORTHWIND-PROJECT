@@ -14,4 +14,5 @@ public sealed record UpdateOrderRequest(
     string? ShipRegion,
     string? ShipPostalCode,
     string? ShipCountry,
+    OrderShippingValidationRequest? ShippingValidation,
     IReadOnlyList<OrderDetailRequest> Details);

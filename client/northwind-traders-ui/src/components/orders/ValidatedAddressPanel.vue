@@ -44,7 +44,10 @@
         </q-item>
       </q-list>
 
-      <q-banner v-if="isNeedsReview" dense class="bg-warning text-black q-mt-md">
+      <q-banner v-if="isGeocodingFallback" dense class="bg-warning text-black q-mt-md">
+        Google Maps found this location, but postal address validation was not completed. Review the coordinates before saving.
+      </q-banner>
+      <q-banner v-else-if="isNeedsReview" dense class="bg-warning text-black q-mt-md">
         Google adjusted or inferred part of this address. Review the formatted address before saving.
       </q-banner>
       <q-banner v-if="isInvalid" dense class="bg-negative text-white q-mt-md">
@@ -78,6 +81,9 @@ const coordinatesLabel = computed(() => {
 const isValidated = computed(() => props.response.validationStatus === 'Validated');
 const isNeedsReview = computed(() => props.response.validationStatus === 'NeedsReview');
 const isInvalid = computed(() => props.response.validationStatus === 'Invalid');
+const isGeocodingFallback = computed(
+  () => props.response.validationGranularity === 'GEOCODE_FALLBACK',
+);
 const isValidationUnavailable = computed(
   () => props.response.validationStatus === 'ValidationUnavailable',
 );

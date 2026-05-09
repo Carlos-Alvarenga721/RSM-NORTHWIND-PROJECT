@@ -18,5 +18,6 @@ public sealed record OrderResponse(
     string? ShipRegion,
     string? ShipPostalCode,
     string? ShipCountry,
+    OrderShippingValidationResponse? ShippingValidation,
     decimal OrderTotal,
     IReadOnlyList<OrderDetailResponse> Details);
