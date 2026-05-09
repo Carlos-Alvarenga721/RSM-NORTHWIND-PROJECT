@@ -1524,6 +1524,12 @@ Address validation statuses:
 - `Invalid`: Google could not validate the input as a complete deliverable address. This status blocks order saving.
 - `ValidationUnavailable`: no API key is configured. This status still allows order saving for local development, but should not be treated as real Google validation.
 
+Frontend UX behavior:
+- Users can select `Ship country` by country name. The frontend stores/sends the ISO country code that Google expects.
+- Existing common values such as `USA`, `United States`, `EEUU`, `El Salvador`, `Mexico`, and `México` are normalized before validation.
+- The address form now shows field-level helper text explaining `Ship address`, `Ship city`, `State / Province / Region`, and optional `Postal code`.
+- Country-specific region hints are shown for common project countries such as the United States, El Salvador, Mexico, Canada, United Kingdom, Germany, France, Brazil, Venezuela, and Ireland.
+
 Google verdict fields now considered:
 - `addressComplete`.
 - `validationGranularity`.
@@ -1539,6 +1545,7 @@ Verification completed:
 - `dotnet test` passed: 20 tests.
 - `npm run typecheck` passed.
 - `npm run build` passed.
+- After the country selector UX update, `npm run typecheck` and `npm run build` passed again.
 
 ### 17.14 Current Pending Work
 

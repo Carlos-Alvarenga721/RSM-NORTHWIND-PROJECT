@@ -1,8 +1,10 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using NorthwindTraders.Application.Abstractions.Persistence;
 using NorthwindTraders.Application.Abstractions.Services;
+using NorthwindTraders.Infrastructure.Options;
 using NorthwindTraders.Infrastructure.Persistence.DbContext;
 using NorthwindTraders.Infrastructure.Persistence.Repositories;
 using NorthwindTraders.Infrastructure.Persistence.UnitOfWork;
@@ -37,9 +39,19 @@ public static class DependencyInjection
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<IOrderPdfReportService, QuestPdfOrderReportService>();
         services.AddScoped<IOrdersReportExportService, OrdersReportExportService>();
-        services.AddHttpClient<IAddressValidationService, GoogleMapsAddressValidationService>(client =>
+        services.Configure<GoogleMapsOptions>(
+            configuration.GetSection(GoogleMapsOptions.SectionName));
+        services.AddHttpClient<IAddressValidationService, GoogleMapsAddressValidationService>((provider, client) =>
         {
-            client.BaseAddress = new Uri("https://addressvalidation.googleapis.com/");
+            var options = provider.GetRequiredService<IOptions<GoogleMapsOptions>>().Value;
+            var baseUrl = string.IsNullOrWhiteSpace(options.AddressValidationBaseUrl)
+                ? GoogleMapsOptions.DefaultAddressValidationBaseUrl
+                : options.AddressValidationBaseUrl;
+            var normalizedBaseUrl = baseUrl.EndsWith('/')
+                ? baseUrl
+                : string.Concat(baseUrl, "/");
+
+            client.BaseAddress = new Uri(normalizedBaseUrl, UriKind.Absolute);
         });
 
         return services;

@@ -16,6 +16,8 @@ using NorthwindTraders.Application.UseCases.Reports.ExportOrdersReport;
 using NorthwindTraders.Application.UseCases.Reports.GetDashboardReport;
 using NorthwindTraders.Application.UseCases.Reports.GetOrdersReport;
 using NorthwindTraders.Application.UseCases.Shippers.GetShippersLookup;
+using NorthwindTraders.Application.DTOs.AddressValidation;
+using NorthwindTraders.Application.Validators;
 
 namespace NorthwindTraders.Application.DependencyInjection;
 
@@ -40,6 +42,7 @@ public static class DependencyInjection
         services.AddScoped<IValidator<CreateOrderRequest>, CreateOrderRequestValidator>();
         services.AddScoped<IValidator<UpdateOrderRequest>, UpdateOrderRequestValidator>();
         services.AddScoped<IValidator<ReportFilterRequest>, ReportFilterRequestValidator>();
+        services.AddScoped<IValidator<AddressValidationRequest>, AddressValidationRequestValidator>();
 
         return services;
     }

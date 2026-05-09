@@ -56,6 +56,18 @@
       :response="validatedAddress"
     />
 
+    <section v-if="validatedAddress && requiresReview" class="panel review-confirmation">
+      <div class="panel-section">
+        <q-banner dense class="bg-warning text-black q-mb-md">
+          Google adjusted or inferred part of this address. Review the formatted address before saving.
+        </q-banner>
+        <q-checkbox
+          v-model="hasReviewedAddress"
+          label="I reviewed and accept the validated address"
+        />
+      </div>
+    </section>
+
     <section class="panel">
       <div class="panel-section order-summary">
         <span>Order total</span>
@@ -97,14 +109,29 @@ const lookupStore = useLookupStore();
 const draft = ref<OrderFormModel>(cloneForm(props.modelValue));
 const validatedAddress = ref<AddressValidationResponse | null>(null);
 const validatedAddressSignature = ref<string | null>(null);
+const hasReviewedAddress = ref(false);
 
 const addressSignature = computed(() => getAddressSignature(draft.value));
-const isAddressValidated = computed(
-  () =>
-    Boolean(validatedAddress.value) &&
-    validatedAddressSignature.value === addressSignature.value &&
-    ['Validated', 'ValidationUnavailable'].includes(validatedAddress.value?.validationStatus ?? ''),
-);
+const validationStatus = computed(() => validatedAddress.value?.validationStatus ?? null);
+const requiresReview = computed(() => validationStatus.value === 'NeedsReview');
+const isInvalidAddress = computed(() => validationStatus.value === 'Invalid');
+const isValidationUnavailable = computed(() => validationStatus.value === 'ValidationUnavailable');
+const isValidatedStatus = computed(() => validationStatus.value === 'Validated');
+const isAddressAccepted = computed(() => {
+  if (!validatedAddress.value) {
+    return false;
+  }
+
+  if (validatedAddressSignature.value !== addressSignature.value) {
+    return false;
+  }
+
+  if (isValidatedStatus.value || isValidationUnavailable.value) {
+    return true;
+  }
+
+  return requiresReview.value && hasReviewedAddress.value;
+});
 const itemsTotal = computed(() =>
   draft.value.details.reduce(
     (sum, detail) => sum + detail.unitPrice * detail.quantity * (1 - detail.discount),
@@ -117,11 +144,16 @@ watch(
   () => props.modelValue,
   (value) => {
     draft.value = cloneForm(value);
-    validatedAddress.value = null;
-    validatedAddressSignature.value = null;
+    clearValidationState();
   },
   { deep: true },
 );
+
+watch(addressSignature, (value) => {
+  if (validatedAddressSignature.value && validatedAddressSignature.value !== value) {
+    clearValidationState();
+  }
+});
 
 onMounted(async () => {
   await lookupStore.loadLookups();
@@ -132,6 +164,8 @@ function submit(): void {
     return;
   }
 
+  const shipAddress = getPreferredShipAddress();
+
   emit('submit', {
     customerId: draft.value.customerId || '',
     employeeId: draft.value.employeeId || 0,
@@ -141,7 +175,7 @@ function submit(): void {
     shipVia: draft.value.shipVia,
     freight: draft.value.freight,
     shipName: draft.value.shipName,
-    shipAddress: draft.value.shipAddress,
+    shipAddress,
     shipCity: draft.value.shipCity,
     shipRegion: draft.value.shipRegion,
     shipPostalCode: draft.value.shipPostalCode,
@@ -180,10 +214,26 @@ function validateBeforeSubmit(): boolean {
     return false;
   }
 
-  if (!isAddressValidated.value) {
+  if (!validatedAddress.value || validatedAddressSignature.value !== addressSignature.value) {
     Notify.create({
       type: 'negative',
       message: 'Validate the shipping address successfully before saving.',
+    });
+    return false;
+  }
+
+  if (isInvalidAddress.value) {
+    Notify.create({
+      type: 'negative',
+      message: validatedAddress.value?.validationMessage || 'Google could not validate this address.',
+    });
+    return false;
+  }
+
+  if (requiresReview.value && !hasReviewedAddress.value) {
+    Notify.create({
+      type: 'negative',
+      message: 'Review and accept the validated address before saving.',
     });
     return false;
   }
@@ -209,6 +259,23 @@ function validateBeforeSubmit(): boolean {
 function handleAddressValidated(response: AddressValidationResponse): void {
   validatedAddress.value = response;
   validatedAddressSignature.value = addressSignature.value;
+  hasReviewedAddress.value = response.validationStatus === 'Validated' ||
+    response.validationStatus === 'ValidationUnavailable';
+  if (response.validationStatus === 'NeedsReview') {
+    hasReviewedAddress.value = false;
+  }
+}
+
+function getPreferredShipAddress(): string | null {
+  if (!validatedAddress.value) {
+    return draft.value.shipAddress;
+  }
+
+  if (!isAddressAccepted.value) {
+    return draft.value.shipAddress;
+  }
+
+  return validatedAddress.value.formattedAddress || draft.value.shipAddress;
 }
 
 function getAddressSignature(value: OrderFormModel): string {
@@ -236,6 +303,12 @@ function cloneForm(value: OrderFormModel): OrderFormModel {
     details: value.details.map((detail) => ({ ...detail })),
   };
 }
+
+function clearValidationState(): void {
+  validatedAddress.value = null;
+  validatedAddressSignature.value = null;
+  hasReviewedAddress.value = false;
+}
 </script>
 
 <style scoped>
@@ -255,5 +328,10 @@ function cloneForm(value: OrderFormModel): OrderFormModel {
   justify-content: flex-end;
   gap: 16px;
   font-size: 18px;
+}
+
+.review-confirmation {
+  display: grid;
+  gap: 12px;
 }
 </style>

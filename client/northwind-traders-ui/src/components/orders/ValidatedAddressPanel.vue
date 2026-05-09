@@ -30,7 +30,26 @@
             <q-item-label>{{ validationMessage }}</q-item-label>
           </q-item-section>
         </q-item>
+        <q-item>
+          <q-item-section>
+            <q-item-label caption>Validation granularity</q-item-label>
+            <q-item-label>{{ response.validationGranularity || 'Not provided' }}</q-item-label>
+          </q-item-section>
+        </q-item>
+        <q-item>
+          <q-item-section>
+            <q-item-label caption>Geocode granularity</q-item-label>
+            <q-item-label>{{ response.geocodeGranularity || 'Not provided' }}</q-item-label>
+          </q-item-section>
+        </q-item>
       </q-list>
+
+      <q-banner v-if="isNeedsReview" dense class="bg-warning text-black q-mt-md">
+        Google adjusted or inferred part of this address. Review the formatted address before saving.
+      </q-banner>
+      <q-banner v-if="isInvalid" dense class="bg-negative text-white q-mt-md">
+        This address could not be validated. Please update the shipping address.
+      </q-banner>
     </div>
     <GoogleMapPreview
       :latitude="response.latitude"
@@ -56,41 +75,51 @@ const coordinatesLabel = computed(() => {
 
   return `${props.response.latitude.toFixed(6)}, ${props.response.longitude.toFixed(6)}`;
 });
+const isValidated = computed(() => props.response.validationStatus === 'Validated');
+const isNeedsReview = computed(() => props.response.validationStatus === 'NeedsReview');
+const isInvalid = computed(() => props.response.validationStatus === 'Invalid');
+const isValidationUnavailable = computed(
+  () => props.response.validationStatus === 'ValidationUnavailable',
+);
 const validationMessage = computed(
   () => props.response.validationMessage || getValidationMessage(props.response.validationStatus),
 );
 const chipColor = computed(() => {
-  if (props.response.validationStatus === 'Validated') {
+  if (isValidated.value) {
     return 'positive';
   }
 
-  if (props.response.validationStatus === 'ValidationUnavailable') {
+  if (isNeedsReview.value || isValidationUnavailable.value) {
     return 'warning';
   }
 
   return 'negative';
 });
 const chipIcon = computed(() => {
-  if (props.response.validationStatus === 'Validated') {
+  if (isValidated.value) {
     return 'verified';
   }
 
-  if (props.response.validationStatus === 'ValidationUnavailable') {
+  if (isNeedsReview.value || isValidationUnavailable.value) {
     return 'warning';
   }
 
   return 'error_outline';
 });
 const chipLabel = computed(() => {
-  if (props.response.validationStatus === 'Validated') {
+  if (isValidated.value) {
     return 'Validated';
   }
 
-  if (props.response.validationStatus === 'ValidationUnavailable') {
-    return 'Accepted';
+  if (isNeedsReview.value) {
+    return 'Needs Review';
   }
 
-  return 'Blocked';
+  if (isValidationUnavailable.value) {
+    return 'Unconfigured';
+  }
+
+  return 'Invalid';
 });
 
 function getValidationMessage(status: string): string {
