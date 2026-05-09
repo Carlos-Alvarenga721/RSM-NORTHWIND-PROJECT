@@ -971,16 +971,25 @@ The following work has already been completed or prepared:
    - `GoogleMapsAddressValidationService`.
    - The service reads `GoogleMaps:ApiKey` from configuration and does not hardcode API keys.
    - If no API key is configured, the backend returns `ValidationUnavailable` so local development can continue without a real Google Maps call.
-60. Prompt 12 individual order PDF export was partially implemented:
+60. Prompt 12 individual order PDF export was implemented:
    - `GET /api/orders/{orderId}/report/pdf`.
    - `IOrderPdfReportService`.
    - `GenerateOrderPdfUseCase`.
    - `QuestPdfOrderReportService`.
-61. `OrderSummaryResponse` now includes `ShipRegion` so the frontend can filter orders by region.
-62. `Microsoft.Extensions.Http` was added to Infrastructure because typed `HttpClient` registration uses `AddHttpClient`.
-63. Frontend `tsconfig.json` uses `skipLibCheck: true` to avoid Quasar optional Electron/PWA declaration errors during `vue-tsc`.
-64. No EF Core migrations have been created. The project is still using Database First against the existing Northwind schema.
-65. No database schema changes were made for address validation coordinates. The current implementation revalidates/display coordinates through the backend service instead of persisting Google validation metadata.
+61. Prompt 11 Reports backend was implemented:
+   - `GET /api/reports/dashboard`.
+   - `GET /api/reports/orders`.
+   - `ReportsController`.
+   - Report DTOs, repository, use cases, and filter validation.
+62. Prompt 12 report export endpoints were implemented:
+   - `GET /api/reports/orders/export/excel` using ClosedXML.
+   - `GET /api/reports/orders/export/pdf` using QuestPDF.
+63. Backend report tests were added for controller behavior, report use cases, export use case, and report filter validation.
+64. `OrderSummaryResponse` now includes `ShipRegion` so the frontend can filter orders by region.
+65. `Microsoft.Extensions.Http` was added to Infrastructure because typed `HttpClient` registration uses `AddHttpClient`.
+66. Frontend `tsconfig.json` uses `skipLibCheck: true` to avoid Quasar optional Electron/PWA declaration errors during `vue-tsc`.
+67. No EF Core migrations have been created. The project is still using Database First against the existing Northwind schema.
+68. No database schema changes were made for address validation coordinates. The current implementation revalidates/display coordinates through the backend service instead of persisting Google validation metadata.
 
 ### 17.3 Current Database and Configuration Decisions
 
@@ -1000,7 +1009,7 @@ Rules:
 
 ### 17.4 Current Implementation Boundary
 
-The project has completed the lookup endpoints, Orders CRUD backend, Quasar frontend scaffold, Orders UI hardening, address validation endpoint, and individual order PDF endpoint.
+The project has completed the lookup endpoints, Orders CRUD backend, Quasar frontend scaffold, Orders UI hardening, address validation endpoint, reports backend, report exports, and individual order PDF endpoint.
 
 Completed or considered completed:
 - Prompt 1: Normalize repository structure.
@@ -1013,23 +1022,15 @@ Completed or considered completed:
 - Prompt 8: Create Quasar TypeScript frontend scaffold.
 - Prompt 9: Build Orders UI.
 - Prompt 10: Add Google Maps address validation.
-- Prompt 12 partial: Individual order PDF export through `GET /api/orders/{orderId}/report/pdf`.
+- Prompt 11: Add reports dashboard backend.
+- Prompt 12: Add PDF and Excel export.
 - Extra backend preparation: Application persistence abstractions, Infrastructure repositories, Unit of Work base, global exception handling middleware, and focused backend tests.
 
 Next recommended task:
-- Prompt 11: Add reports dashboard backend endpoints and repository/query support.
+- Prompt 13: Add backend tests beyond the current focused coverage.
 
 Remaining major tasks:
-- Complete Prompt 11 Reports backend:
-  - `ReportsController`.
-  - `GET /api/reports/dashboard`.
-  - `GET /api/reports/orders`.
-  - Report DTOs/use cases/repository.
-  - Filters by year, month, week, and region.
-- Complete Prompt 12 report exports:
-  - `GET /api/reports/orders/export/excel` using ClosedXML.
-  - Optional `GET /api/reports/orders/export/pdf` or remove/hide the frontend button until implemented.
-- Complete Prompt 13 backend tests for validators, report filtering, address validation with mocked service, controllers, and export services.
+- Complete Prompt 13 backend tests for remaining validators, address validation with mocked service, PDF/export services, and additional controller status codes.
 - Complete Prompt 14 README, setup documentation, known limitations, and demo script.
 
 ### 17.5 Completed Task Details: Prompt 6
@@ -1273,7 +1274,7 @@ Frontend implementation notes:
 - Uses Quasar Dialog for delete confirmation.
 - Uses Chart.js and vue-chartjs for dashboard charts.
 - Uses Google Maps embed URLs for map preview display.
-- Report and Excel UI paths are prepared. Report backend endpoints and report exports still need backend implementation.
+- Report and export UI paths now have matching backend endpoints.
 - Address validation frontend and backend are now implemented.
 - Individual order PDF frontend and backend are now implemented.
 - The Customer, Employee, and Shipper selectors currently use explicit `QInput` + `QMenu` + `QItem` selection instead of `QSelect`.
@@ -1308,11 +1309,14 @@ npm run typecheck
 npm run build
 ```
 
-Result:
+Result after Prompt 9, Prompt 10, and individual order PDF implementation:
 - `dotnet build NorthwindTraders.sln` passed with 0 warnings and 0 errors.
 - `dotnet test NorthwindTraders.sln` passed with 9 tests.
 - `npm run typecheck` passed.
 - `npm run build` passed and produced the Quasar SPA under `client/northwind-traders-ui/dist/spa`.
+
+Result after Prompt 11 and report export implementation:
+- `dotnet test NorthwindTraders.sln` passed with 15 tests.
 
 Before continuing frontend work, run from an environment with a working Node.js installation:
 
@@ -1380,42 +1384,173 @@ Important behavior:
 - If `GoogleMaps:ApiKey` is missing, the service returns `ValidationUnavailable`.
 - Unit tests must mock `IAddressValidationService` and must not call real Google Maps APIs.
 
-### 17.10 Completed Task Details: Prompt 12 Partial
+### 17.10 Completed Task Details: Prompt 11
 
-The individual order PDF export portion of Prompt 12 is implemented.
+Prompt 11 added report dashboard backend endpoints compatible with the existing frontend report page.
 
-Implemented backend endpoint:
+Implemented backend endpoints:
+
+```text
+GET /api/reports/dashboard
+GET /api/reports/orders
+```
+
+Important backend files:
+
+```text
+src/NorthwindTraders.Api/Controllers/ReportsController.cs
+src/NorthwindTraders.Application/Abstractions/Persistence/IReportRepository.cs
+src/NorthwindTraders.Application/DTOs/Reports/
+src/NorthwindTraders.Application/UseCases/Reports/GetDashboardReport/GetDashboardReportUseCase.cs
+src/NorthwindTraders.Application/UseCases/Reports/GetOrdersReport/GetOrdersReportUseCase.cs
+src/NorthwindTraders.Infrastructure/Persistence/Repositories/ReportRepository.cs
+```
+
+Report filters:
+- Year.
+- Month.
+- Week.
+- Region.
+
+Report response supports:
+- Orders over time chart points.
+- Shipments by region chart points.
+- Filtered order detail table rows.
+
+### 17.11 Completed Task Details: Prompt 12
+
+Prompt 12 export support is implemented for individual order PDF and filtered report exports.
+
+Implemented backend endpoints:
 
 ```text
 GET /api/orders/{orderId}/report/pdf
+GET /api/reports/orders/export/excel
+GET /api/reports/orders/export/pdf
 ```
 
 Important backend files:
 
 ```text
 src/NorthwindTraders.Api/Controllers/OrdersController.cs
+src/NorthwindTraders.Api/Controllers/ReportsController.cs
 src/NorthwindTraders.Application/Abstractions/Services/IOrderPdfReportService.cs
+src/NorthwindTraders.Application/Abstractions/Services/IOrdersReportExportService.cs
 src/NorthwindTraders.Application/UseCases/Orders/GenerateOrderPdf/GenerateOrderPdfUseCase.cs
+src/NorthwindTraders.Application/UseCases/Reports/ExportOrdersReport/ExportOrdersReportUseCase.cs
 src/NorthwindTraders.Infrastructure/Services/Reports/QuestPdfOrderReportService.cs
+src/NorthwindTraders.Infrastructure/Services/Reports/OrdersReportExportService.cs
 ```
 
-Still pending from Prompt 12:
-- Filtered report Excel export using ClosedXML.
-- Optional filtered report PDF export.
+Export implementation:
+- Filtered report Excel uses ClosedXML.
+- Filtered report PDF uses QuestPDF.
+- Individual order PDF uses QuestPDF.
 
-### 17.11 Current Pending Work
+### 17.12 Completed Task Details: Reports Dashboard Stabilization
+
+The Reports dashboard was hardened for runtime stability and a more controlled corporate dashboard layout.
+
+Updated frontend files:
+
+```text
+client/northwind-traders-ui/src/pages/ReportsDashboardPage.vue
+client/northwind-traders-ui/src/components/reports/OrdersOverTimeChart.vue
+client/northwind-traders-ui/src/components/reports/ShipmentsByRegionChart.vue
+client/northwind-traders-ui/src/stores/reportStore.ts
+client/northwind-traders-ui/src/services/reportService.ts
+```
+
+Frontend behavior:
+- Report filters now use compact Quasar controls with client-side validation for year, month, ISO week, and region.
+- The dashboard displays safe loading, error, and empty states for metrics, charts, and the order table.
+- Export Excel and Export PDF actions have independent loading states and reuse the active applied filters.
+- Chart.js canvases are rendered inside fixed-height responsive containers with resize delay and disabled animation to avoid resize loops and oversized first renders.
+- Report responses are normalized on the client so missing arrays are treated as empty arrays.
+- The report store protects against stale concurrent loads and keeps a user-facing error message when a load fails.
+
+Updated backend files:
+
+```text
+src/NorthwindTraders.Application/DTOs/Reports/OrdersReportResponse.cs
+src/NorthwindTraders.Application/UseCases/Reports/GetDashboardReport/GetDashboardReportUseCase.cs
+src/NorthwindTraders.Application/UseCases/Reports/GetOrdersReport/GetOrdersReportUseCase.cs
+src/NorthwindTraders.Application/UseCases/Reports/ExportOrdersReport/ExportOrdersReportUseCase.cs
+src/NorthwindTraders.Infrastructure/Persistence/Repositories/ReportRepository.cs
+tests/NorthwindTraders.UnitTests/Application/Reports/GetOrdersReportUseCaseTests.cs
+```
+
+Backend behavior:
+- Report use cases normalize report responses so collections are returned as empty arrays instead of null collections.
+- The report repository now applies year, month, and region filters in the EF query before materializing orders. ISO week filtering remains in memory because it uses `ISOWeek.GetWeekOfYear`.
+- Added unit coverage for null report collection normalization.
+
+Verification completed:
+- `dotnet build` passed.
+- `dotnet test` passed: 16 tests.
+- `npm run typecheck` passed.
+- `npm run build` passed.
+- Local API smoke test passed: `GET http://localhost:5083/api/reports/orders` returned 200 with report arrays.
+- Local frontend smoke test passed: Quasar dev server served `/reports` with HTTP 200 at `http://192.168.56.100:9000/reports`.
+
+Environment note:
+- The first frontend verification attempt failed because Windows npm could not resolve the local `.bin` shims and the Windows Rolldown optional native binding was missing. Running `npm install` refreshed the frontend install; the subsequent `npm run typecheck` and `npm run build` passed.
+
+### 17.13 Completed Task Details: Strict Address Validation
+
+Google Maps Address Validation handling was tightened so invalid or uncertain addresses are no longer treated as successful validation.
+
+Updated backend files:
+
+```text
+src/NorthwindTraders.Application/DTOs/AddressValidation/AddressValidationResponse.cs
+src/NorthwindTraders.Infrastructure/Services/AddressValidation/GoogleMapsAddressValidationService.cs
+tests/NorthwindTraders.UnitTests/Infrastructure/AddressValidation/GoogleMapsAddressValidationServiceTests.cs
+tests/NorthwindTraders.UnitTests/NorthwindTraders.UnitTests.csproj
+```
+
+Updated frontend files:
+
+```text
+client/northwind-traders-ui/src/types/addressValidation.ts
+client/northwind-traders-ui/src/components/orders/AddressValidationForm.vue
+client/northwind-traders-ui/src/components/orders/OrderForm.vue
+client/northwind-traders-ui/src/components/orders/ValidatedAddressPanel.vue
+```
+
+Address validation statuses:
+- `Validated`: Google returned a complete premise-level address with coordinates and no inferred/replaced/unconfirmed components. This status allows order saving.
+- `NeedsReview`: Google found the address but adjusted, inferred, spell-corrected, or could not provide coordinates. This status blocks order saving.
+- `Invalid`: Google could not validate the input as a complete deliverable address. This status blocks order saving.
+- `ValidationUnavailable`: no API key is configured. This status still allows order saving for local development, but should not be treated as real Google validation.
+
+Google verdict fields now considered:
+- `addressComplete`.
+- `validationGranularity`.
+- `geocodeGranularity`.
+- `hasUnconfirmedComponents`.
+- `hasReplacedComponents`.
+- `hasInferredComponents`.
+- `hasSpellCorrectedComponents`.
+- Geocode latitude and longitude.
+
+Verification completed:
+- `dotnet build` passed.
+- `dotnet test` passed: 20 tests.
+- `npm run typecheck` passed.
+- `npm run build` passed.
+
+### 17.14 Current Pending Work
 
 Highest-priority pending work:
 
-1. Implement Reports backend.
-2. Implement filtered report Excel export.
-3. Add backend tests for reports, validators, address validation use case, and export services.
-4. Update README with setup/run/test/API-key/demo instructions.
-5. Decide whether to keep or remove optional report PDF export from the frontend until the backend endpoint exists.
+1. Add remaining backend tests for address validation use case, PDF/export services, and additional controller status codes.
+2. Update README with setup/run/test/API-key/demo instructions.
+3. Prepare final cleanup and demo script.
 
 Do not add authentication unless explicitly requested.
 
-### 17.12 Current Git Safety Rules
+### 17.15 Current Git Safety Rules
 
 Before every commit:
 

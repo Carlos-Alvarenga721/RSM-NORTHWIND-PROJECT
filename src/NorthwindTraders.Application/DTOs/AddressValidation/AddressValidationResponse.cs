@@ -6,4 +6,7 @@ public sealed record AddressValidationResponse(
     double? Latitude,
     double? Longitude,
     string ValidationStatus,
-    string? GooglePlaceId);
+    string? GooglePlaceId,
+    string? ValidationMessage,
+    string? ValidationGranularity,
+    string? GeocodeGranularity);

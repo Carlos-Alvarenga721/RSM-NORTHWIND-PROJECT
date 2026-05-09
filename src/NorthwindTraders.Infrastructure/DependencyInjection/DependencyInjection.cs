@@ -33,8 +33,10 @@ public static class DependencyInjection
         services.AddScoped<IShipperRepository, ShipperRepository>();
         services.AddScoped<IProductRepository, ProductRepository>();
         services.AddScoped<IOrderRepository, OrderRepository>();
+        services.AddScoped<IReportRepository, ReportRepository>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<IOrderPdfReportService, QuestPdfOrderReportService>();
+        services.AddScoped<IOrdersReportExportService, OrdersReportExportService>();
         services.AddHttpClient<IAddressValidationService, GoogleMapsAddressValidationService>(client =>
         {
             client.BaseAddress = new Uri("https://addressvalidation.googleapis.com/");

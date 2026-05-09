@@ -24,6 +24,12 @@
             <q-item-label>{{ coordinatesLabel }}</q-item-label>
           </q-item-section>
         </q-item>
+        <q-item>
+          <q-item-section>
+            <q-item-label caption>Validation result</q-item-label>
+            <q-item-label>{{ validationMessage }}</q-item-label>
+          </q-item-section>
+        </q-item>
       </q-list>
     </div>
     <GoogleMapPreview
@@ -50,9 +56,58 @@ const coordinatesLabel = computed(() => {
 
   return `${props.response.latitude.toFixed(6)}, ${props.response.longitude.toFixed(6)}`;
 });
-const chipColor = computed(() => (props.response.validationStatus === 'ValidationUnavailable' ? 'warning' : 'positive'));
-const chipIcon = computed(() => (props.response.validationStatus === 'ValidationUnavailable' ? 'warning' : 'verified'));
-const chipLabel = computed(() => (props.response.validationStatus === 'ValidationUnavailable' ? 'Accepted' : 'Validated'));
+const validationMessage = computed(
+  () => props.response.validationMessage || getValidationMessage(props.response.validationStatus),
+);
+const chipColor = computed(() => {
+  if (props.response.validationStatus === 'Validated') {
+    return 'positive';
+  }
+
+  if (props.response.validationStatus === 'ValidationUnavailable') {
+    return 'warning';
+  }
+
+  return 'negative';
+});
+const chipIcon = computed(() => {
+  if (props.response.validationStatus === 'Validated') {
+    return 'verified';
+  }
+
+  if (props.response.validationStatus === 'ValidationUnavailable') {
+    return 'warning';
+  }
+
+  return 'error_outline';
+});
+const chipLabel = computed(() => {
+  if (props.response.validationStatus === 'Validated') {
+    return 'Validated';
+  }
+
+  if (props.response.validationStatus === 'ValidationUnavailable') {
+    return 'Accepted';
+  }
+
+  return 'Blocked';
+});
+
+function getValidationMessage(status: string): string {
+  if (status === 'NeedsReview') {
+    return 'Google found the address but it needs review before saving.';
+  }
+
+  if (status === 'Invalid') {
+    return 'Google could not validate this as a complete deliverable address.';
+  }
+
+  if (status === 'ValidationUnavailable') {
+    return 'Google address validation is not configured.';
+  }
+
+  return 'Google validated this address.';
+}
 </script>
 
 <style scoped>

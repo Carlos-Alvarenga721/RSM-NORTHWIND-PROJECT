@@ -11,6 +11,9 @@ export interface AddressValidationResponse {
   formattedAddress: string | null;
   latitude: number | null;
   longitude: number | null;
-  validationStatus: string;
+  validationStatus: 'Validated' | 'NeedsReview' | 'Invalid' | 'ValidationUnavailable' | string;
   googlePlaceId: string | null;
+  validationMessage: string | null;
+  validationGranularity: string | null;
+  geocodeGranularity: string | null;
 }

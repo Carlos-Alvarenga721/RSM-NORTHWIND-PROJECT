@@ -103,7 +103,7 @@ const isAddressValidated = computed(
   () =>
     Boolean(validatedAddress.value) &&
     validatedAddressSignature.value === addressSignature.value &&
-    validatedAddress.value?.validationStatus !== 'Invalid',
+    ['Validated', 'ValidationUnavailable'].includes(validatedAddress.value?.validationStatus ?? ''),
 );
 const itemsTotal = computed(() =>
   draft.value.details.reduce(
@@ -181,7 +181,10 @@ function validateBeforeSubmit(): boolean {
   }
 
   if (!isAddressValidated.value) {
-    Notify.create({ type: 'negative', message: 'Validate the shipping address before saving.' });
+    Notify.create({
+      type: 'negative',
+      message: 'Validate the shipping address successfully before saving.',
+    });
     return false;
   }
 

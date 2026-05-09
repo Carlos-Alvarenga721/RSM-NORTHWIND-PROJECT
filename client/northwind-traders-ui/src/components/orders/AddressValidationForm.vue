@@ -103,17 +103,32 @@ async function validateAddress(): Promise<void> {
       country: props.country,
     });
     emit('validated', response);
+    const isAccepted = ['Validated', 'ValidationUnavailable'].includes(response.validationStatus);
     Notify.create({
-      type: response.validationStatus === 'ValidationUnavailable' ? 'warning' : 'positive',
-      message: response.validationStatus === 'ValidationUnavailable'
-        ? 'Address accepted. Google validation is not configured.'
-        : 'Shipping address validated.',
+      type: isAccepted ? (response.validationStatus === 'ValidationUnavailable' ? 'warning' : 'positive') : 'negative',
+      message: response.validationMessage || getValidationMessage(response.validationStatus),
     });
   } catch (error) {
     notifyApiError(error);
   } finally {
     isValidating.value = false;
   }
+}
+
+function getValidationMessage(status: string): string {
+  if (status === 'ValidationUnavailable') {
+    return 'Address accepted. Google validation is not configured.';
+  }
+
+  if (status === 'NeedsReview') {
+    return 'Google found this address but it needs review before saving.';
+  }
+
+  if (status === 'Invalid') {
+    return 'Google could not validate this address. Please review it.';
+  }
+
+  return 'Shipping address validated.';
 }
 </script>
 

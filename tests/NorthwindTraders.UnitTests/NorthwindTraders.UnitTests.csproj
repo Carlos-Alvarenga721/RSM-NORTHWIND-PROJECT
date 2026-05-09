@@ -24,6 +24,7 @@
     <ProjectReference Include="..\..\src\NorthwindTraders.Domain\NorthwindTraders.Domain.csproj" />
     <ProjectReference Include="..\..\src\NorthwindTraders.Application\NorthwindTraders.Application.csproj" />
     <ProjectReference Include="..\..\src\NorthwindTraders.Api\NorthwindTraders.Api.csproj" />
+    <ProjectReference Include="..\..\src\NorthwindTraders.Infrastructure\NorthwindTraders.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>
