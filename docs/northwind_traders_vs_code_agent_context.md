@@ -959,9 +959,28 @@ The following work has already been completed or prepared:
 55. Backend order creation was hardened to save the order header first, then insert order details with the generated `OrderId`.
 56. The Orders create endpoint now returns `Created($"/api/orders/{order.OrderId}", order)` instead of `CreatedAtAction`, because `CreatedAtAction` was throwing `No route matches the supplied values`.
 57. Frontend error handling was improved to avoid showing raw Axios messages such as `Request failed with status code 500`.
-58. Google Maps address validation backend has not been implemented yet, but the frontend service and UI are prepared for `POST /api/address-validation/validate`.
-59. Reports, PDF export, and Excel export backend endpoints have not been implemented yet, but the frontend services and UI are prepared for the expected routes.
-60. No EF Core migrations have been created. The project is still using Database First against the existing Northwind schema.
+58. Prompt 9 Orders UI hardening was completed:
+   - Orders list includes pagination, sorting, search, year/month/region filters, ship country filter, and freight display.
+   - Orders list includes create, view, edit, and delete actions with confirmation.
+   - Order detail shows order information, line items, shipping address, validated address information when available, coordinates, map preview, freight, and order total.
+   - Order form supports create/edit, customer/employee/shipper/product selection, product line items, frontend validation, address validation, map preview, and dynamic order total including freight.
+59. Prompt 10 address validation backend was implemented:
+   - `POST /api/address-validation/validate`.
+   - `IAddressValidationService`.
+   - `ValidateAddressUseCase`.
+   - `GoogleMapsAddressValidationService`.
+   - The service reads `GoogleMaps:ApiKey` from configuration and does not hardcode API keys.
+   - If no API key is configured, the backend returns `ValidationUnavailable` so local development can continue without a real Google Maps call.
+60. Prompt 12 individual order PDF export was partially implemented:
+   - `GET /api/orders/{orderId}/report/pdf`.
+   - `IOrderPdfReportService`.
+   - `GenerateOrderPdfUseCase`.
+   - `QuestPdfOrderReportService`.
+61. `OrderSummaryResponse` now includes `ShipRegion` so the frontend can filter orders by region.
+62. `Microsoft.Extensions.Http` was added to Infrastructure because typed `HttpClient` registration uses `AddHttpClient`.
+63. Frontend `tsconfig.json` uses `skipLibCheck: true` to avoid Quasar optional Electron/PWA declaration errors during `vue-tsc`.
+64. No EF Core migrations have been created. The project is still using Database First against the existing Northwind schema.
+65. No database schema changes were made for address validation coordinates. The current implementation revalidates/display coordinates through the backend service instead of persisting Google validation metadata.
 
 ### 17.3 Current Database and Configuration Decisions
 
@@ -981,7 +1000,7 @@ Rules:
 
 ### 17.4 Current Implementation Boundary
 
-The project has completed the lookup endpoints, Orders CRUD backend, and the first Vue 3 + Quasar + TypeScript frontend scaffold.
+The project has completed the lookup endpoints, Orders CRUD backend, Quasar frontend scaffold, Orders UI hardening, address validation endpoint, and individual order PDF endpoint.
 
 Completed or considered completed:
 - Prompt 1: Normalize repository structure.
@@ -992,12 +1011,26 @@ Completed or considered completed:
 - Prompt 6: Create lookup endpoints.
 - Prompt 7: Create Orders CRUD backend.
 - Prompt 8: Create Quasar TypeScript frontend scaffold.
+- Prompt 9: Build Orders UI.
+- Prompt 10: Add Google Maps address validation.
+- Prompt 12 partial: Individual order PDF export through `GET /api/orders/{orderId}/report/pdf`.
 - Extra backend preparation: Application persistence abstractions, Infrastructure repositories, Unit of Work base, global exception handling middleware, and focused backend tests.
 
-Next task:
-- Prompt 9: Build the Orders UI page and improve the order details for the Northwind Traders Order Management System.
+Next recommended task:
+- Prompt 11: Add reports dashboard backend endpoints and repository/query support.
 
-Do not start Prompt 9 UI hardening until explicitly requested.
+Remaining major tasks:
+- Complete Prompt 11 Reports backend:
+  - `ReportsController`.
+  - `GET /api/reports/dashboard`.
+  - `GET /api/reports/orders`.
+  - Report DTOs/use cases/repository.
+  - Filters by year, month, week, and region.
+- Complete Prompt 12 report exports:
+  - `GET /api/reports/orders/export/excel` using ClosedXML.
+  - Optional `GET /api/reports/orders/export/pdf` or remove/hide the frontend button until implemented.
+- Complete Prompt 13 backend tests for validators, report filtering, address validation with mocked service, controllers, and export services.
+- Complete Prompt 14 README, setup documentation, known limitations, and demo script.
 
 ### 17.5 Completed Task Details: Prompt 6
 
@@ -1240,10 +1273,12 @@ Frontend implementation notes:
 - Uses Quasar Dialog for delete confirmation.
 - Uses Chart.js and vue-chartjs for dashboard charts.
 - Uses Google Maps embed URLs for map preview display.
-- Report, address validation, PDF, and Excel UI paths are prepared, but those backend endpoints are expected in later prompts.
+- Report and Excel UI paths are prepared. Report backend endpoints and report exports still need backend implementation.
+- Address validation frontend and backend are now implemented.
+- Individual order PDF frontend and backend are now implemented.
 - The Customer, Employee, and Shipper selectors currently use explicit `QInput` + `QMenu` + `QItem` selection instead of `QSelect`.
 - `OrderForm.vue` intentionally does not emit `update:modelValue` on every internal draft change. A previous deep watcher caused `Maximum recursive updates exceeded` and prevented dropdown selection.
-- The Validate Address button currently calls a prepared frontend service, but the backend endpoint does not exist yet. It returns 404 until Prompt 10 or the address validation backend is implemented.
+- The Validate Address button calls `POST /api/address-validation/validate`. With `GoogleMaps:ApiKey` configured, the backend calls Google Maps Address Validation API. Without the key, it returns `ValidationUnavailable` for local development.
 - Manual smoke test completed:
   - Orders page loads live backend data.
   - Customer and Employee can be selected on Create Order.
@@ -1263,6 +1298,22 @@ Build/run status after Prompt 8:
 - Quasar dev server runs on port `9000`.
 - The browser origin may be `http://192.168.56.100:9000`, so that origin is allowed in backend CORS.
 
+Validation status after Prompt 9, Prompt 10, and individual order PDF implementation:
+
+```bash
+dotnet build NorthwindTraders.sln
+dotnet test NorthwindTraders.sln
+cd client/northwind-traders-ui
+npm run typecheck
+npm run build
+```
+
+Result:
+- `dotnet build NorthwindTraders.sln` passed with 0 warnings and 0 errors.
+- `dotnet test NorthwindTraders.sln` passed with 9 tests.
+- `npm run typecheck` passed.
+- `npm run build` passed and produced the Quasar SPA under `client/northwind-traders-ui/dist/spa`.
+
 Before continuing frontend work, run from an environment with a working Node.js installation:
 
 ```bash
@@ -1271,7 +1322,100 @@ npm install
 npm run dev
 ```
 
-### 17.8 Current Git Safety Rules
+### 17.8 Completed Task Details: Prompt 9
+
+Prompt 9 completed the Orders UI page and improved order details.
+
+Implemented frontend behavior:
+- Orders table with pagination and sorting.
+- Search by order ID, customer, employee, and other visible order metadata.
+- Filters by year, month, region, and ship country.
+- Columns for order ID, customer, employee, order date, region, ship country, freight, item count, total, and actions.
+- Create Order action routes to the create page.
+- View Details and Edit actions route to the correct order pages.
+- Delete action uses Quasar Dialog confirmation and Notify feedback.
+- Order detail page shows order information, product line items, shipping address, map preview, freight, and total.
+- Order form requires valid customer, employee, shipping address, validated address, non-duplicate products, valid quantity, valid unit price, valid discount, and non-negative freight.
+- Order form calculates order total as line totals plus freight.
+
+Important frontend files:
+
+```text
+client/northwind-traders-ui/src/pages/OrdersPage.vue
+client/northwind-traders-ui/src/pages/OrderDetailPage.vue
+client/northwind-traders-ui/src/pages/OrderFormPage.vue
+client/northwind-traders-ui/src/components/orders/OrderForm.vue
+client/northwind-traders-ui/src/components/orders/ProductLineItemsTable.vue
+client/northwind-traders-ui/src/components/orders/AddressValidationForm.vue
+client/northwind-traders-ui/src/components/orders/ValidatedAddressPanel.vue
+client/northwind-traders-ui/src/components/maps/GoogleMapPreview.vue
+client/northwind-traders-ui/src/stores/orderStore.ts
+client/northwind-traders-ui/src/types/orders.ts
+```
+
+### 17.9 Completed Task Details: Prompt 10
+
+Prompt 10 added Google Maps address validation support through the backend.
+
+Implemented backend endpoint:
+
+```text
+POST /api/address-validation/validate
+```
+
+Important backend files:
+
+```text
+src/NorthwindTraders.Api/Controllers/AddressValidationController.cs
+src/NorthwindTraders.Application/Abstractions/Services/IAddressValidationService.cs
+src/NorthwindTraders.Application/DTOs/AddressValidation/AddressValidationRequest.cs
+src/NorthwindTraders.Application/DTOs/AddressValidation/AddressValidationResponse.cs
+src/NorthwindTraders.Application/UseCases/AddressValidation/ValidateAddress/ValidateAddressUseCase.cs
+src/NorthwindTraders.Infrastructure/Services/AddressValidation/GoogleMapsAddressValidationService.cs
+```
+
+Important behavior:
+- Real API keys must be configured through `GoogleMaps:ApiKey`.
+- Real keys must not be committed.
+- If `GoogleMaps:ApiKey` is missing, the service returns `ValidationUnavailable`.
+- Unit tests must mock `IAddressValidationService` and must not call real Google Maps APIs.
+
+### 17.10 Completed Task Details: Prompt 12 Partial
+
+The individual order PDF export portion of Prompt 12 is implemented.
+
+Implemented backend endpoint:
+
+```text
+GET /api/orders/{orderId}/report/pdf
+```
+
+Important backend files:
+
+```text
+src/NorthwindTraders.Api/Controllers/OrdersController.cs
+src/NorthwindTraders.Application/Abstractions/Services/IOrderPdfReportService.cs
+src/NorthwindTraders.Application/UseCases/Orders/GenerateOrderPdf/GenerateOrderPdfUseCase.cs
+src/NorthwindTraders.Infrastructure/Services/Reports/QuestPdfOrderReportService.cs
+```
+
+Still pending from Prompt 12:
+- Filtered report Excel export using ClosedXML.
+- Optional filtered report PDF export.
+
+### 17.11 Current Pending Work
+
+Highest-priority pending work:
+
+1. Implement Reports backend.
+2. Implement filtered report Excel export.
+3. Add backend tests for reports, validators, address validation use case, and export services.
+4. Update README with setup/run/test/API-key/demo instructions.
+5. Decide whether to keep or remove optional report PDF export from the frontend until the backend endpoint exists.
+
+Do not add authentication unless explicitly requested.
+
+### 17.12 Current Git Safety Rules
 
 Before every commit:
 
