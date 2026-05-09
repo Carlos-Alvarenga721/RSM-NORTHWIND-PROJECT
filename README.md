@@ -6,8 +6,6 @@ The project includes a Clean Architecture ASP.NET Core Web API backend, Entity F
 
 ## Demo Video
 
-Paste the YouTube demo video link here:
-
 ```text
 https://youtu.be/fJtie-oytns
 ```
