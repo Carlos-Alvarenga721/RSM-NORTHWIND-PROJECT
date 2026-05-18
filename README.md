@@ -6,8 +6,6 @@ The project includes a Clean Architecture ASP.NET Core Web API backend, Entity F
 
 ## Demo Video
 
-Paste the YouTube demo video link here:
-
 ```text
 https://youtu.be/fJtie-oytns
 ```
@@ -244,9 +242,3 @@ Sample body:
 - If address validation returns unavailable or unauthorized responses, verify that the Google Maps API key is configured, billing is active, and the Address Validation API is enabled.
 - If the frontend cannot reach the API, confirm that the backend is running at `http://localhost:5083`.
 - If npm commands fail, confirm that Node.js 20 or later is installed.
-
-## Notes
-
-- Authentication is not implemented by design.
-- Docker support is treated as a final bonus and is not required to run the project locally.
-- Keep code, file names, comments, UI labels, and documentation in English.
