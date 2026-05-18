@@ -21,6 +21,9 @@ using NorthwindTraders.Application.Validators;
 
 namespace NorthwindTraders.Application.DependencyInjection;
 
+/// <summary>
+/// Registers application use cases and validators while keeping infrastructure implementations out of this project.
+/// </summary>
 public static class DependencyInjection
 {
     public static IServiceCollection AddApplication(this IServiceCollection services)

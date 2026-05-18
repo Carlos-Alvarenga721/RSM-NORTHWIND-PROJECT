@@ -44,6 +44,7 @@ export const useReportStore = defineStore('reports', {
   }),
   actions: {
     async loadReport(): Promise<void> {
+      // Only the newest request is allowed to update state, which prevents stale filter results from flashing.
       const requestId = ++activeReportRequest;
       this.isLoading = true;
       this.errorMessage = null;

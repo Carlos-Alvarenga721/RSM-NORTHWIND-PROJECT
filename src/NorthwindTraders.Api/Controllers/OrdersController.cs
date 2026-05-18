@@ -9,6 +9,9 @@ using NorthwindTraders.Application.UseCases.Orders.UpdateOrder;
 
 namespace NorthwindTraders.Api.Controllers;
 
+/// <summary>
+/// HTTP entry point for the order workflow; all business decisions stay in application use cases.
+/// </summary>
 [ApiController]
 [Route("api/[controller]")]
 public sealed class OrdersController(
@@ -19,6 +22,9 @@ public sealed class OrdersController(
     DeleteOrderUseCase deleteOrderUseCase,
     GenerateOrderPdfUseCase generateOrderPdfUseCase) : ControllerBase
 {
+    /// <summary>
+    /// Returns the lightweight list used by the orders page.
+    /// </summary>
     [HttpGet]
     public async Task<IActionResult> GetAsync(CancellationToken cancellationToken)
     {
@@ -27,6 +33,9 @@ public sealed class OrdersController(
         return Ok(orders);
     }
 
+    /// <summary>
+    /// Returns one order with line items and saved shipping validation metadata.
+    /// </summary>
     [HttpGet("{orderId:int}")]
     public async Task<IActionResult> GetByIdAsync(int orderId, CancellationToken cancellationToken)
     {
@@ -35,6 +44,9 @@ public sealed class OrdersController(
         return Ok(order);
     }
 
+    /// <summary>
+    /// Creates an order through the application layer and exposes the created resource location.
+    /// </summary>
     [HttpPost]
     public async Task<IActionResult> CreateAsync(
         CreateOrderRequest request,
@@ -45,6 +57,9 @@ public sealed class OrdersController(
         return Created($"/api/orders/{order.OrderId}", order);
     }
 
+    /// <summary>
+    /// Updates the order header, shipping validation metadata, and product line items.
+    /// </summary>
     [HttpPut("{orderId:int}")]
     public async Task<IActionResult> UpdateAsync(
         int orderId,
@@ -56,6 +71,9 @@ public sealed class OrdersController(
         return Ok(order);
     }
 
+    /// <summary>
+    /// Deletes an order and its details through the repository-backed use case.
+    /// </summary>
     [HttpDelete("{orderId:int}")]
     public async Task<IActionResult> DeleteAsync(int orderId, CancellationToken cancellationToken)
     {
@@ -64,6 +82,9 @@ public sealed class OrdersController(
         return NoContent();
     }
 
+    /// <summary>
+    /// Generates the branded PDF that is downloaded from the order detail page.
+    /// </summary>
     [HttpGet("{orderId:int}/report/pdf")]
     public async Task<IActionResult> GeneratePdfAsync(int orderId, CancellationToken cancellationToken)
     {

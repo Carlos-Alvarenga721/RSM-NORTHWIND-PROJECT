@@ -4,6 +4,9 @@ using NorthwindTraders.Application.DTOs.AddressValidation;
 
 namespace NorthwindTraders.Application.UseCases.AddressValidation.ValidateAddress;
 
+/// <summary>
+/// Validates the address request before delegating the external Google Maps call to Infrastructure.
+/// </summary>
 public sealed class ValidateAddressUseCase(
     IAddressValidationService addressValidationService,
     IValidator<AddressValidationRequest> validator)
@@ -21,6 +24,7 @@ public sealed class ValidateAddressUseCase(
     {
         await validator.ValidateAndThrowAsync(request, cancellationToken);
 
+        // The application layer only depends on the service contract, keeping HTTP details out of this use case.
         return await addressValidationService.ValidateAsync(request, cancellationToken);
     }
 }

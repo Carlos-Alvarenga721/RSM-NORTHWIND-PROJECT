@@ -23,6 +23,18 @@ public sealed class CreateOrderRequestValidator : AbstractValidator<CreateOrderR
             .MustAsync(employeeRepository.ExistsAsync)
             .WithMessage("EmployeeId must reference an existing employee.");
 
+        RuleFor(request => request.OrderDate)
+            .NotNull()
+            .WithMessage("OrderDate is required.");
+
+        RuleFor(request => request.RequiredDate)
+            .Must((request, requiredDate) => OrderDateValidationRules.IsOnOrAfter(requiredDate, request.OrderDate))
+            .WithMessage("RequiredDate cannot be before OrderDate.");
+
+        RuleFor(request => request.ShippedDate)
+            .Must((request, shippedDate) => OrderDateValidationRules.IsOnOrAfter(shippedDate, request.OrderDate))
+            .WithMessage("ShippedDate cannot be before OrderDate.");
+
         RuleFor(request => request.ShipVia)
             .MustAsync(async (value, cancellationToken) =>
                 value is null || await shipperRepository.ExistsAsync(value.Value, cancellationToken))
@@ -74,6 +86,18 @@ public sealed class UpdateOrderRequestValidator : AbstractValidator<UpdateOrderR
             .GreaterThan(0)
             .MustAsync(employeeRepository.ExistsAsync)
             .WithMessage("EmployeeId must reference an existing employee.");
+
+        RuleFor(request => request.OrderDate)
+            .NotNull()
+            .WithMessage("OrderDate is required.");
+
+        RuleFor(request => request.RequiredDate)
+            .Must((request, requiredDate) => OrderDateValidationRules.IsOnOrAfter(requiredDate, request.OrderDate))
+            .WithMessage("RequiredDate cannot be before OrderDate.");
+
+        RuleFor(request => request.ShippedDate)
+            .Must((request, shippedDate) => OrderDateValidationRules.IsOnOrAfter(shippedDate, request.OrderDate))
+            .WithMessage("ShippedDate cannot be before OrderDate.");
 
         RuleFor(request => request.ShipVia)
             .MustAsync(async (value, cancellationToken) =>
@@ -158,5 +182,13 @@ public sealed class OrderDetailRequestValidator : AbstractValidator<OrderDetailR
 
         RuleFor(detail => detail.Discount)
             .InclusiveBetween(OrderBusinessRules.MinimumDiscount, OrderBusinessRules.MaximumDiscount);
+    }
+}
+
+internal static class OrderDateValidationRules
+{
+    public static bool IsOnOrAfter(DateTime? value, DateTime? minimum)
+    {
+        return !value.HasValue || !minimum.HasValue || value.Value.Date >= minimum.Value.Date;
     }
 }

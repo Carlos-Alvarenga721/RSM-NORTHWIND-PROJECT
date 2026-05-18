@@ -7,6 +7,9 @@ using NorthwindTraders.Infrastructure.Persistence.Entities;
 
 namespace NorthwindTraders.Infrastructure.Persistence.Repositories;
 
+/// <summary>
+/// Builds the reporting read model from Northwind orders, customers, employees, and line totals.
+/// </summary>
 public sealed class ReportRepository(NorthwindDbContext dbContext) : IReportRepository
 {
     public async Task<OrdersReportResponse> GetOrdersReportAsync(
@@ -24,6 +27,7 @@ public sealed class ReportRepository(NorthwindDbContext dbContext) : IReportRepo
         var orders = await query
             .ToListAsync(cancellationToken);
 
+        // ISO week filtering uses .NET calendar logic, so it is applied after the database query.
         var filteredOrders = ApplyInMemoryFilters(orders, filters)
             .OrderByDescending(order => order.OrderDate)
             .ThenByDescending(order => order.OrderId)

@@ -25,10 +25,12 @@ const props = defineProps<{
 
 const mapUrl = computed(() => {
   if (props.latitude !== null && props.longitude !== null) {
+    // Prefer coordinates from validation because they are less ambiguous than free-form address text.
     return `https://maps.google.com/maps?q=${props.latitude},${props.longitude}&z=14&output=embed`;
   }
 
   if (props.address) {
+    // Address text is a fallback for older orders or validation responses without coordinates.
     return `https://maps.google.com/maps?q=${encodeURIComponent(props.address)}&z=14&output=embed`;
   }
 

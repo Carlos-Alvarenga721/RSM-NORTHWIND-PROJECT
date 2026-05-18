@@ -43,7 +43,16 @@
             />
           </div>
           <div class="col-12 col-md-2">
-            <q-input v-model="regionFilter" outlined dense debounce="250" label="Ship region" />
+            <q-select
+              v-model="shipmentStatusFilter"
+              outlined
+              dense
+              clearable
+              emit-value
+              map-options
+              :options="shipmentStatusOptions"
+              label="Shipment status"
+            />
           </div>
           <div class="col-12 col-md-2">
             <q-input v-model="countryFilter" outlined dense debounce="250" label="Ship country" />
@@ -61,6 +70,14 @@
         >
           <template #body-cell-orderDate="scope">
             <q-td :props="scope">{{ formatDate(scope.row.orderDate) }}</q-td>
+          </template>
+          <template #body-cell-shipmentStatus="scope">
+            <q-td :props="scope">
+              <q-badge
+                :color="getShipmentStatusColor(scope.row)"
+                :label="getShipmentStatusLabel(scope.row)"
+              />
+            </q-td>
           </template>
           <template #body-cell-orderTotal="scope">
             <q-td :props="scope">{{ formatCurrency(scope.row.orderTotal) }}</q-td>
@@ -97,10 +114,12 @@ import { useOrderStore } from 'src/stores/orderStore';
 import { notifyApiError } from 'src/services/errorHandler';
 import type { OrderSummaryResponse } from 'src/types/orders';
 
+type ShipmentStatusFilter = 'shipped' | 'not-shipped';
+
 const orderStore = useOrderStore();
 const search = ref('');
 const countryFilter = ref('');
-const regionFilter = ref('');
+const shipmentStatusFilter = ref<ShipmentStatusFilter | null>(null);
 const yearFilter = ref<number | null>(null);
 const monthFilter = ref<number | null>(null);
 const pagination = ref({
@@ -116,7 +135,13 @@ const columns: QTableColumn<OrderSummaryResponse>[] = [
   { name: 'employeeName', label: 'Employee', field: 'employeeName', sortable: true, align: 'left' },
   { name: 'orderDate', label: 'Order Date', field: 'orderDate', sortable: true, align: 'left' },
   { name: 'shipperName', label: 'Shipper', field: 'shipperName', sortable: true, align: 'left' },
-  { name: 'shipRegion', label: 'Region', field: 'shipRegion', sortable: true, align: 'left' },
+  {
+    name: 'shipmentStatus',
+    label: 'Status',
+    field: (order) => getShipmentStatusLabel(order),
+    sortable: true,
+    align: 'left',
+  },
   { name: 'shipCountry', label: 'Ship Country', field: 'shipCountry', sortable: true, align: 'left' },
   { name: 'freight', label: 'Freight', field: 'freight', sortable: true, align: 'right' },
   { name: 'detailCount', label: 'Items', field: 'detailCount', sortable: true, align: 'right' },
@@ -139,6 +164,11 @@ const monthOptions = [
   { label: 'December', value: 12 },
 ];
 
+const shipmentStatusOptions: Array<{ label: string; value: ShipmentStatusFilter }> = [
+  { label: 'Shipped', value: 'shipped' },
+  { label: 'Not shipped', value: 'not-shipped' },
+];
+
 const yearOptions = computed(() =>
   [...new Set(orderStore.orders
     .map((order) => (order.orderDate ? new Date(order.orderDate).getFullYear() : null))
@@ -150,10 +180,10 @@ const yearOptions = computed(() =>
 const filteredOrders = computed(() => {
   const term = search.value.toLowerCase();
   const country = countryFilter.value.toLowerCase();
-  const region = regionFilter.value.toLowerCase();
 
   return orderStore.orders.filter((order) => {
     const orderDate = order.orderDate ? new Date(order.orderDate) : null;
+    const isShipped = Boolean(order.shippedDate);
     const text = [
       order.orderId,
       order.customerId,
@@ -163,6 +193,7 @@ const filteredOrders = computed(() => {
       order.shipCity,
       order.shipRegion,
       order.shipCountry,
+      getShipmentStatusLabel(order),
     ]
       .join(' ')
       .toLowerCase();
@@ -170,7 +201,8 @@ const filteredOrders = computed(() => {
     return (
       (!term || text.includes(term)) &&
       (!country || (order.shipCountry || '').toLowerCase().includes(country)) &&
-      (!region || (order.shipRegion || '').toLowerCase().includes(region)) &&
+      (!shipmentStatusFilter.value ||
+        (shipmentStatusFilter.value === 'shipped' ? isShipped : !isShipped)) &&
       (!yearFilter.value || orderDate?.getFullYear() === yearFilter.value) &&
       (!monthFilter.value || (orderDate?.getMonth() ?? -1) + 1 === monthFilter.value)
     );
@@ -217,5 +249,13 @@ function formatDate(value: string | null): string {
 
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
+}
+
+function getShipmentStatusLabel(order: OrderSummaryResponse): string {
+  return order.shippedDate ? 'Shipped' : 'Not shipped';
+}
+
+function getShipmentStatusColor(order: OrderSummaryResponse): string {
+  return order.shippedDate ? 'positive' : 'grey-7';
 }
 </script>

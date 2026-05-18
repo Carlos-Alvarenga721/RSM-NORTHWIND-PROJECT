@@ -6,6 +6,9 @@ using NorthwindTraders.Application.UseCases.AddressValidation.ValidateAddress;
 
 namespace NorthwindTraders.Api.Controllers;
 
+/// <summary>
+/// Validates shipping addresses before an order is saved so the frontend can show status and map data.
+/// </summary>
 [ApiController]
 [Route("api/address-validation")]
 public sealed class AddressValidationController(
@@ -20,6 +23,7 @@ public sealed class AddressValidationController(
         var validationResult = await validator.ValidateAsync(request, cancellationToken);
         if (!validationResult.IsValid)
         {
+            // Return field-level validation details in the same shape the frontend error handler expects.
             var errors = validationResult.Errors
                 .GroupBy(error => error.PropertyName)
                 .ToDictionary(

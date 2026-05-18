@@ -2,6 +2,9 @@ using NorthwindTraders.Application.DTOs.Orders;
 
 namespace NorthwindTraders.Application.Abstractions.Persistence;
 
+/// <summary>
+/// Application-facing order persistence contract; implementations hide EF Core and Northwind table details.
+/// </summary>
 public interface IOrderRepository
 {
     Task<IReadOnlyList<OrderSummaryResponse>> GetOrdersAsync(CancellationToken cancellationToken = default);
@@ -10,6 +13,9 @@ public interface IOrderRepository
 
     Task<CreatedOrderReference> AddAsync(CreateOrderRequest request, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Adds detail rows after the database-generated OrderId is available.
+    /// </summary>
     Task AddDetailsAsync(
         int orderId,
         IReadOnlyList<OrderDetailRequest> details,

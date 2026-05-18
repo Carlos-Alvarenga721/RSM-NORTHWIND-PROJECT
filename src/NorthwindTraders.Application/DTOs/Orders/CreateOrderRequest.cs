@@ -1,5 +1,8 @@
 namespace NorthwindTraders.Application.DTOs.Orders;
 
+/// <summary>
+/// API contract for creating an order header, optional validated shipping metadata, and product details together.
+/// </summary>
 public sealed record CreateOrderRequest(
     string CustomerId,
     int EmployeeId,

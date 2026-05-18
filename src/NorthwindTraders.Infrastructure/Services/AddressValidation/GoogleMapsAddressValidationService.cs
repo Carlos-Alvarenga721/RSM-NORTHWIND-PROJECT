@@ -11,6 +11,9 @@ using NorthwindTraders.Infrastructure.Options;
 
 namespace NorthwindTraders.Infrastructure.Services.AddressValidation;
 
+/// <summary>
+/// Converts Google Maps validation and geocoding responses into the small status model used by the app.
+/// </summary>
 public sealed class GoogleMapsAddressValidationService(
     HttpClient httpClient,
     IOptions<GoogleMapsOptions> options,
@@ -123,6 +126,7 @@ public sealed class GoogleMapsAddressValidationService(
 
             if (response.StatusCode == HttpStatusCode.BadRequest)
             {
+                // Some addresses fail strict validation but still return useful coordinates from the geocoding API.
                 var geocodingFallback = await TryCreateGeocodingFallbackAsync(
                     request,
                     originalAddress,
@@ -194,6 +198,8 @@ public sealed class GoogleMapsAddressValidationService(
         var hasSpellCorrectedComponents = GetBoolean(verdict?["hasSpellCorrectedComponents"]);
         var hasPremiseLevelValidation = IsPremiseLevel(validationGranularity);
         var hasCoordinates = latitude.HasValue && longitude.HasValue;
+
+        // The frontend only needs a stable business status, not every raw Google verdict flag.
         var status = GetValidationStatus(
             addressComplete,
             hasPremiseLevelValidation,

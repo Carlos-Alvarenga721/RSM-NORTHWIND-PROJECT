@@ -13,10 +13,24 @@
             <q-input v-model="draft.orderDate" outlined dense type="date" label="Order date" />
           </div>
           <div class="col-12 col-md-4">
-            <q-input v-model="draft.requiredDate" outlined dense type="date" label="Required date" />
+            <q-input
+              v-model="draft.requiredDate"
+              outlined
+              dense
+              type="date"
+              label="Required date"
+              :min="draft.orderDate || undefined"
+            />
           </div>
           <div class="col-12 col-md-4">
-            <q-input v-model="draft.shippedDate" outlined dense type="date" label="Shipped date" />
+            <q-input
+              v-model="draft.shippedDate"
+              outlined
+              dense
+              type="date"
+              label="Shipped date"
+              :min="draft.orderDate || undefined"
+            />
           </div>
           <div class="col-12 col-md-6">
             <ShipperSelector v-model="draft.shipVia" />
@@ -107,6 +121,8 @@ const emit = defineEmits<{
 
 const lookupStore = useLookupStore();
 const draft = ref<OrderFormModel>(cloneForm(props.modelValue));
+
+// Keep the accepted validation tied to the exact address text that was validated.
 const validatedAddress = ref<AddressValidationResponse | null>(null);
 const validatedAddressSignature = ref<string | null>(null);
 const hasReviewedAddress = ref(false);
@@ -151,6 +167,7 @@ watch(
 
 watch(addressSignature, (value) => {
   if (validatedAddressSignature.value && validatedAddressSignature.value !== value) {
+    // Changing any address field invalidates the previous Google validation result.
     clearValidationState();
   }
 });
@@ -165,6 +182,7 @@ function submit(): void {
     return;
   }
 
+  // Persist Google's formatted address only after the current validation has been accepted.
   const shipAddress = getPreferredShipAddress();
 
   emit('submit', {
@@ -187,6 +205,7 @@ function submit(): void {
 }
 
 function validateBeforeSubmit(): boolean {
+  // Frontend checks mirror the backend validator to give immediate feedback before the API call.
   const invalidDetail = draft.value.details.find(
     (detail) =>
       detail.productId <= 0 ||
@@ -203,6 +222,21 @@ function validateBeforeSubmit(): boolean {
 
   if (!draft.value.employeeId || draft.value.employeeId <= 0) {
     Notify.create({ type: 'negative', message: 'Employee is required.' });
+    return false;
+  }
+
+  if (!draft.value.orderDate) {
+    Notify.create({ type: 'negative', message: 'Order date is required.' });
+    return false;
+  }
+
+  if (isDateBefore(draft.value.requiredDate, draft.value.orderDate)) {
+    Notify.create({ type: 'negative', message: 'Required date cannot be before order date.' });
+    return false;
+  }
+
+  if (isDateBefore(draft.value.shippedDate, draft.value.orderDate)) {
+    Notify.create({ type: 'negative', message: 'Shipped date cannot be before order date.' });
     return false;
   }
 
@@ -294,6 +328,14 @@ function formatCurrency(value: number): string {
     style: 'currency',
     currency: 'USD',
   }).format(value);
+}
+
+function isDateBefore(value: string | null, minimum: string | null): boolean {
+  if (!value || !minimum) {
+    return false;
+  }
+
+  return value < minimum;
 }
 
 function cloneForm(value: OrderFormModel): OrderFormModel {

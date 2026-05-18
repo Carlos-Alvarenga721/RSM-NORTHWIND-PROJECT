@@ -13,6 +13,9 @@ using NorthwindTraders.Infrastructure.Services.Reports;
 
 namespace NorthwindTraders.Infrastructure.DependencyInjection;
 
+/// <summary>
+/// Wires external implementations for persistence, Google Maps, and report generation.
+/// </summary>
 public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(
@@ -41,6 +44,8 @@ public static class DependencyInjection
         services.AddScoped<IOrdersReportExportService, OrdersReportExportService>();
         services.Configure<GoogleMapsOptions>(
             configuration.GetSection(GoogleMapsOptions.SectionName));
+
+        // The address validation client receives a normalized base URL; the API key stays in options.
         services.AddHttpClient<IAddressValidationService, GoogleMapsAddressValidationService>((provider, client) =>
         {
             var options = provider.GetRequiredService<IOptions<GoogleMapsOptions>>().Value;

@@ -6,6 +6,9 @@ using NorthwindTraders.Infrastructure.Persistence.Entities;
 
 namespace NorthwindTraders.Infrastructure.Persistence.Repositories;
 
+/// <summary>
+/// Maps between Northwind EF Core entities and the application order DTOs.
+/// </summary>
 public sealed class OrderRepository(NorthwindDbContext dbContext) : IOrderRepository
 {
     public async Task<IReadOnlyList<OrderSummaryResponse>> GetOrdersAsync(CancellationToken cancellationToken = default)
@@ -70,6 +73,8 @@ public sealed class OrderRepository(NorthwindDbContext dbContext) : IOrderReposi
 
         ApplyOrderValues(order, request);
         ApplyShippingValidation(order, request.ShippingValidation);
+
+        // ProductId is part of the detail key, so updates preserve matching rows and replace only missing products.
         var requestedProductIds = request.Details
             .Select(detail => detail.ProductId)
             .ToHashSet();
@@ -194,6 +199,8 @@ public sealed class OrderRepository(NorthwindDbContext dbContext) : IOrderReposi
     private static OrderResponse MapOrder(Order order)
     {
         var freight = order.Freight ?? 0;
+
+        // Responses sort line items by product name for a stable detail page and PDF output.
         var details = order.OrderDetails
             .OrderBy(detail => detail.Product.ProductName)
             .Select(detail => new OrderDetailResponse(

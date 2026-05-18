@@ -4,6 +4,9 @@ using NorthwindTraders.Application.DTOs.Orders;
 
 namespace NorthwindTraders.Application.UseCases.Orders.CreateOrder;
 
+/// <summary>
+/// Coordinates order creation without knowing how SQL Server generates the final order identifier.
+/// </summary>
 public sealed class CreateOrderUseCase(
     IOrderRepository orderRepository,
     IUnitOfWork unitOfWork,
@@ -14,6 +17,8 @@ public sealed class CreateOrderUseCase(
         await validator.ValidateAndThrowAsync(request, cancellationToken);
 
         var createdOrder = await orderRepository.AddAsync(request, cancellationToken);
+
+        // Northwind generates OrderId when the header is saved, so details are inserted after the first commit.
         await unitOfWork.SaveChangesAsync(cancellationToken);
         await orderRepository.AddDetailsAsync(createdOrder.OrderId, request.Details, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);

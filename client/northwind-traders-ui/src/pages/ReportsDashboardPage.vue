@@ -310,6 +310,7 @@ async function loadReport(): Promise<void> {
   }
 
   try {
+    // Normalize Quasar form values before sending query parameters to the API.
     reportStore.setFilters(normalizeFilters(filters.value));
     await reportStore.loadReport();
     pagination.value.page = 1;
@@ -321,6 +322,7 @@ async function loadReport(): Promise<void> {
 async function exportExcel(): Promise<void> {
   isExportingExcel.value = true;
   try {
+    // Exports use the active store filters so downloaded files match the visible dashboard.
     const file = await exportOrdersToExcel(reportStore.filters);
     downloadFile(file, 'northwind-orders-report.xlsx');
     Notify.create({ type: 'positive', message: 'Excel export generated.' });
@@ -334,6 +336,7 @@ async function exportExcel(): Promise<void> {
 async function exportPdf(): Promise<void> {
   isExportingPdf.value = true;
   try {
+    // Exports use the active store filters so downloaded files match the visible dashboard.
     const file = await exportOrdersToPdf(reportStore.filters);
     downloadFile(file, 'northwind-orders-report.pdf');
     Notify.create({ type: 'positive', message: 'PDF export generated.' });

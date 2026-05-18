@@ -26,6 +26,7 @@ export const useOrderStore = defineStore('orders', {
     isLoading: false,
   }),
   actions: {
+    // Centralize order API calls so pages stay focused on presentation and navigation.
     async loadOrders(): Promise<void> {
       this.isLoading = true;
       try {
